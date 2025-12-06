@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>2026 大阪和歌山遊</title>
     
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⛩️</text></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⛩️</text></svg>">
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/5223/5223909.png">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/5223/5223909.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -14,18 +14,15 @@
     <style>
         body { -webkit-tap-highlight-color: transparent; background-color: #fdfcf8; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        #loading { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #eee; border-top-color: #788a6d; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
         [v-cloak] { display: none; }
+        /* 連線狀態燈號 */
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .bg-green-500 { background-color: #22c55e; }
+        .bg-yellow-500 { background-color: #eab308; }
+        .bg-red-500 { background-color: #ef4444; }
     </style>
 </head>
 <body class="text-gray-800 font-sans h-screen overflow-hidden flex flex-col">
-
-    <div id="loading">
-        <div class="spinner"></div>
-        <p class="mt-4 text-gray-500 text-sm">正在同步雲端帳本...</p>
-    </div>
 
     <div id="app" v-cloak class="flex-1 flex flex-col h-full relative">
 
@@ -37,6 +34,12 @@
             <div v-if="currentTab === 'itinerary'" class="text-right">
                 <span class="block text-2xl font-bold">{{ currentDayDate }}</span>
                 <span class="text-xs text-gray-400">Day {{ currentDayIndex + 1 }}</span>
+            </div>
+            <div v-if="currentTab === 'budget'" class="text-right">
+                <div class="flex items-center justify-end text-xs text-gray-400">
+                    <span class="status-dot" :class="connectionStatusColor"></span>
+                    {{ connectionStatusText }}
+                </div>
             </div>
         </header>
 
@@ -161,6 +164,11 @@
                     </form>
                 </div>
                 <div class="space-y-3">
+                    <div v-if="isLoadingBudget" class="text-center py-8 text-gray-400 text-sm">
+                        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> 讀取雲端資料中...
+                    </div>
+                    <div v-else-if="sortedBudgetItems.length === 0" class="text-center py-8 text-gray-400 text-sm">尚未有記帳紀錄</div>
+                    
                     <div v-for="item in sortedBudgetItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center shadow-sm">
                         <div class="flex items-center">
                             <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs mr-3 text-white" :class="getCategoryColor(item.category)">
@@ -240,34 +248,14 @@
             measurementId: "G-ZKSY80ZS3T"
         };
 
-        // 初始化 Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
         createApp({
             setup() {
-                // 行程資料 (手機端儲存)
-                const DB_TRIP = 'japan_trip_local_final_v1'; 
+                // 資料庫鑰匙 (Local)
+                const DB_TRIP = 'japan_trip_local_v7'; 
                 
-                const defaultTripData = [
-                    { day: 1, date: "2/28", theme: "和歌山．加太線", spots: [{ time: "06:00", name: "關西機場", type: "transport", desc: "入境", tags: ["入境"], transport: "南海線" }, { time: "11:00", name: "淡嶋神社", type: "spot", desc: "加太線終點", tags: ["加太線"] }, { time: "13:00", name: "井出商店拉麵", type: "food", desc: "午餐", tags: ["必吃"], cost: "¥1000" }, { time: "16:00", name: "Dormy Inn", type: "hotel", desc: "Check-in", tags: ["住宿"] }] },
-                    { day: 2, date: "3/1", theme: "南紀白濱溫泉", spots: [{ time: "09:00", name: "白濱站", type: "transport", desc: "前往白濱", tags: ["移動"], cost: "¥3740" }, { time: "11:00", name: "ToreTore 市場", type: "food", desc: "海鮮燒烤", tags: ["必吃"] }, { time: "16:00", name: "白浜御苑", type: "hotel", desc: "溫泉飯店", tags: ["溫泉"] }] },
-                    { day: 3, date: "3/2", theme: "回大阪．難波", spots: [{ time: "09:00", name: "圓月島", type: "spot", desc: "拍照", tags: ["拍照"] }, { time: "11:00", name: "回大阪", type: "transport", desc: "移動", cost: "¥5380" }, { time: "15:00", name: "道頓堀", type: "shopping", desc: "逛街", tags: ["購物"] }] },
-                    { day: 4, date: "3/3", theme: "環球影城", spots: [{ time: "07:30", name: "USJ", type: "spot", desc: "全日遊玩", tags: ["必去"], cost: "¥760" }, { time: "19:00", name: "CityWalk", type: "food", desc: "晚餐", tags: ["晚餐"] }] },
-                    { day: 5, date: "3/4", theme: "海遊館", spots: [{ time: "10:00", name: "海遊館", type: "spot", desc: "水族館", tags: ["親子"], cost: "¥580" }, { time: "16:00", name: "梅田", type: "shopping", desc: "購物", tags: ["購物"] }] },
-                    { day: 6, date: "3/5", theme: "返程", spots: [{ time: "09:00", name: "難波八阪神社", type: "spot", desc: "獅子頭", tags: ["拍照"] }, { time: "20:00", name: "機場", type: "transport", desc: "登機", tags: ["離境"], cost: "¥970" }] }
-                ];
-
-                const flights = ref([
-                    { type: "去程", code: "GK50", dep: "TPE 台北", arr: "KIX 大阪", depTime: "02:30", arrTime: "06:00", duration: "2h 30m" },
-                    { type: "回程", code: "GK51", dep: "KIX 大阪", arr: "TPE 台北", depTime: "23:10", arrTime: "01:30+1", duration: "3h 20m" }
-                ]);
-                const hotels = ref([
-                    { date: "2/28", name: "Dormy Inn Premium Wakayama", address: "和歌山市美園町3-36" },
-                    { date: "3/1", name: "白浜御苑 (大江戸温泉物語)", address: "和歌山県西牟婁郡白浜町1011" },
-                    { date: "3/2-3/5", name: "APA Hotel Namba", address: "大阪市浪速区湊町1-2-13" }
-                ]);
-
                 // 狀態
                 const currentTab = ref('itinerary');
                 const currentDayIndex = ref(0);
@@ -279,34 +267,47 @@
                 const editDayIndex = ref(null);
                 const editIndex = ref(null);
                 const editForm = ref({ time: '', name: '', type: 'spot', desc: '', transport: '', cost: '' });
+                const isLoadingBudget = ref(true);
+                const connectionStatus = ref('connecting'); // connecting, connected, error
+
+                // 預設資料
+                const defaultTripData = [
+                    { day: 1, date: "2/28", theme: "和歌山．加太線", spots: [{ time: "06:00", name: "關西機場", type: "transport", desc: "入境", tags: ["入境"], transport: "南海線" }, { time: "11:00", name: "淡嶋神社", type: "spot", desc: "加太線終點", tags: ["加太線"] }, { time: "13:00", name: "井出商店拉麵", type: "food", desc: "午餐", tags: ["必吃"], cost: "¥1000" }, { time: "16:00", name: "Dormy Inn", type: "hotel", desc: "Check-in", tags: ["住宿"] }] },
+                    { day: 2, date: "3/1", theme: "南紀白濱溫泉", spots: [{ time: "09:00", name: "白濱站", type: "transport", desc: "前往白濱", tags: ["移動"], cost: "¥3740" }, { time: "11:00", name: "ToreTore 市場", type: "food", desc: "海鮮燒烤", tags: ["必吃"] }, { time: "16:00", name: "白浜御苑", type: "hotel", desc: "溫泉飯店", tags: ["溫泉"] }] },
+                    { day: 3, date: "3/2", theme: "回大阪．難波", spots: [{ time: "09:00", name: "圓月島", type: "spot", desc: "拍照", tags: ["拍照"] }, { time: "11:00", name: "回大阪", type: "transport", desc: "移動", cost: "¥5380" }, { time: "15:00", name: "道頓堀", type: "shopping", desc: "逛街", tags: ["購物"] }] },
+                    { day: 4, date: "3/3", theme: "環球影城", spots: [{ time: "07:30", name: "USJ", type: "spot", desc: "全日遊玩", tags: ["必去"], cost: "¥760" }, { time: "19:00", name: "CityWalk", type: "food", desc: "晚餐", tags: ["晚餐"] }] },
+                    { day: 5, date: "3/4", theme: "海遊館", spots: [{ time: "10:00", name: "海遊館", type: "spot", desc: "水族館", tags: ["親子"], cost: "¥580" }, { time: "16:00", name: "梅田", type: "shopping", desc: "購物", tags: ["購物"] }] },
+                    { day: 6, date: "3/5", theme: "返程", spots: [{ time: "09:00", name: "難波八阪神社", type: "spot", desc: "獅子頭", tags: ["拍照"] }, { time: "20:00", name: "機場", type: "transport", desc: "登機", tags: ["離境"], cost: "¥970" }] }
+                ];
+                const flights = ref([{ type: "去程", code: "GK50", dep: "TPE 台北", arr: "KIX 大阪", depTime: "02:30", arrTime: "06:00", duration: "2h 30m" }, { type: "回程", code: "GK51", dep: "KIX 大阪", arr: "TPE 台北", depTime: "23:10", arrTime: "01:30+1", duration: "3h 20m" }]);
+                const hotels = ref([{ date: "2/28", name: "Dormy Inn Premium Wakayama", address: "和歌山市美園町3-36" }, { date: "3/1", name: "白浜御苑", address: "和歌山県西牟婁郡白浜町1011" }, { date: "3/2-3/5", name: "APA Hotel Namba", address: "大阪市浪速区湊町1-2-13" }]);
 
                 // 初始化
                 onMounted(() => {
-                    // 1. 載入行程
+                    // 1. 載入行程 (Local - 秒開)
                     const savedTrip = localStorage.getItem(DB_TRIP);
                     tripData.value = savedTrip ? JSON.parse(savedTrip) : JSON.parse(JSON.stringify(defaultTripData));
 
-                    // 2. 載入雲端記帳 (監聽)
-                    const q = query(collection(db, "expenses"), orderBy("createdAt", "desc"));
-                    onSnapshot(q, (snapshot) => {
-                        budgetItems.value = snapshot.docs.map(doc => ({
-                            id: doc.id,
-                            ...doc.data()
-                        }));
-                        // 移除 Loading
-                        const loadingEl = document.getElementById('loading');
-                        if (loadingEl) loadingEl.remove();
-                    }, (error) => {
-                        console.error("Firebase Error:", error);
-                        // 發生錯誤也要移除 loading，讓行程能看
-                        const loadingEl = document.getElementById('loading');
-                        if (loadingEl) loadingEl.remove();
-                    });
+                    // 2. 載入記帳 (Firebase - 背景讀取)
+                    try {
+                        const q = query(collection(db, "expenses"), orderBy("createdAt", "desc"));
+                        onSnapshot(q, (snapshot) => {
+                            budgetItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            isLoadingBudget.value = false;
+                            connectionStatus.value = 'connected';
+                        }, (error) => {
+                            console.error("Firebase Error:", error);
+                            isLoadingBudget.value = false;
+                            connectionStatus.value = 'error';
+                        });
+                    } catch (e) {
+                        connectionStatus.value = 'error';
+                    }
                 });
 
                 // 行程儲存
                 const saveTripData = () => { localStorage.setItem(DB_TRIP, JSON.stringify(tripData.value)); };
-                const resetData = () => { if(confirm('確定重置行程？所有修改會消失。')) { tripData.value = JSON.parse(JSON.stringify(defaultTripData)); saveTripData(); } };
+                const resetData = () => { if(confirm('重置行程？')) { tripData.value = JSON.parse(JSON.stringify(defaultTripData)); saveTripData(); } };
 
                 // 行程編輯
                 const openEditSpot = (d, i) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=i; editForm.value={...tripData.value[d].spots[i], tags:''}; showModal.value=true; };
@@ -325,7 +326,7 @@
                 const deleteSpot = () => { if(confirm('刪除？')) { tripData.value[editDayIndex.value].spots.splice(editIndex.value, 1); saveTripData(); showModal.value=false; } };
                 const closeModal = () => showModal.value=false;
 
-                // ★★★ 雲端記帳邏輯 ★★★
+                // 記帳邏輯
                 const addExpense = async () => {
                     if(!budgetForm.value.item || !budgetForm.value.amount) return;
                     try {
@@ -336,16 +337,9 @@
                             createdAt: serverTimestamp()
                         });
                         budgetForm.value.item=''; budgetForm.value.amount=null;
-                    } catch (e) {
-                        alert("新增失敗: " + e.message);
-                    }
+                    } catch (e) { alert("新增失敗，請檢查網路"); }
                 };
-
-                const deleteExpense = async (id) => {
-                    if(confirm('刪除此筆？')) {
-                        try { await deleteDoc(doc(db, "expenses", id)); } catch (e) { alert("刪除失敗: " + e.message); }
-                    }
-                };
+                const deleteExpense = async (id) => { if(confirm('刪除？')) { try { await deleteDoc(doc(db, "expenses", id)); } catch (e) { alert("刪除失敗"); } } };
 
                 // Utils
                 const openMap = (d) => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(d)}`, '_blank');
@@ -355,14 +349,26 @@
                 const getCategoryColor = (c) => ({'food':'bg-orange-500','transport':'bg-blue-500','shopping':'bg-pink-500','stay':'bg-indigo-500'}[c] || 'bg-gray-500');
                 const getCategoryIcon = (c) => `fa-solid ` + ({'food':'fa-utensils','transport':'fa-train','shopping':'fa-bag-shopping','stay':'fa-bed'}[c] || 'fa-tag');
                 
+                // Computed
                 const getPageTitle = computed(() => ({'itinerary':'行程一覽','info':'資訊','budget':'記帳'}[currentTab.value]));
                 const currentDayDate = computed(() => tripData.value[currentDayIndex.value]?.date || '');
                 const totalSpent = computed(() => budgetItems.value.reduce((s,i)=>s+(i.amount||0),0));
                 const sortedBudgetItems = computed(() => budgetItems.value);
+                const connectionStatusText = computed(() => {
+                    if (connectionStatus.value === 'connecting') return '連線中...';
+                    if (connectionStatus.value === 'connected') return '已連線';
+                    return '離線模式';
+                });
+                const connectionStatusColor = computed(() => {
+                    if (connectionStatus.value === 'connecting') return 'bg-yellow-500';
+                    if (connectionStatus.value === 'connected') return 'bg-green-500';
+                    return 'bg-red-500';
+                });
 
                 return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, showModal, editForm, isEditingTheme, editIndex,
                     getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, openMap, formatNumber, formatDate, addExpense, deleteExpense,
-                    getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData
+                    getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData,
+                    isLoadingBudget, connectionStatusText, connectionStatusColor
                 };
             }
         }).mount('#app');

@@ -87,7 +87,7 @@
                             
                             <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ spot.time }}</span>
                             <h4 class="text-lg font-bold mt-1 flex items-center">{{ spot.name }} 
-                                <button @click.stop="searchNearby(spot.name, 'location')" class="ml-2 text-gray-300 text-sm"><i class="fa-solid fa-location-arrow"></i></button>
+                                <button @click.stop="openMap(spot.name, 'location')" class="ml-2 text-gray-300 text-sm"><i class="fa-solid fa-location-arrow"></i></button>
                             </h4>
                             
                             <p v-if="spot.desc" class="text-sm text-gray-600 mt-1 whitespace-pre-line">{{ spot.desc }}</p>
@@ -155,10 +155,10 @@
                                     <p class="text-xs text-gray-500 mt-1 mb-2">{{ hotel.date }}</p>
                                     <p class="text-sm text-gray-600 leading-snug">{{ hotel.address }}</p>
                                     <div class="flex gap-2 mt-3">
-                                        <button @click="searchNearby(hotel.name, 'location')" class="text-xs text-[#788a6d] font-bold flex items-center bg-gray-50 px-2 py-1 rounded">
+                                        <button @click="openMap(hotel.name, 'location')" class="text-xs text-[#788a6d] font-bold flex items-center bg-gray-50 px-2 py-1 rounded">
                                             <i class="fa-solid fa-map-pin mr-1"></i> 導航
                                         </button>
-                                        <button @click="searchNearby(hotel.name, '便利商店')" class="text-xs text-blue-500 font-bold flex items-center bg-blue-50 px-2 py-1 rounded">
+                                        <button @click="openMap(hotel.name, '便利商店')" class="text-xs text-blue-500 font-bold flex items-center bg-blue-50 px-2 py-1 rounded">
                                             <i class="fa-solid fa-store mr-1"></i> 找超商
                                         </button>
                                     </div>
@@ -261,45 +261,6 @@
             </div>
         </div>
         
-        <div v-if="showSearchModal" class="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm" @click.self="showSearchModal = false">
-            <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
-                <div class="text-center mb-4">
-                    <i :class="getSearchIcon(searchModalContent.type)" class="text-4xl text-[#788a6d] mb-2"></i>
-                    <h3 class="text-xl font-bold">
-                        {{ searchModalContent.type === 'location' ? '地點資訊確認' : '附近搜尋確認' }}
-                    </h3>
-                </div>
-                
-                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
-                    <p class="text-sm font-bold text-gray-600 mb-1">
-                        {{ searchModalContent.type === 'location' ? '即將開啟地點：' : '您正在搜尋：' }}
-                    </p>
-                    <p class="text-lg font-extrabold text-gray-800">
-                        {{ searchModalContent.location }}
-                        <span v-if="searchModalContent.type !== 'location'">附近 {{ searchModalContent.type }}</span>
-                    </p>
-                </div>
-
-                <div class="space-y-3 mb-4">
-                    <p v-if="searchModalContent.type === 'location'" class="text-sm text-gray-700">
-                        系統將為您開啟 Google 地圖，顯示 **<span class="font-bold text-[#788a6d]">此地點的詳細資訊頁面</span>**。
-                        您可以查看 **<span class="font-bold text-blue-600">評論、照片、開放時間等資訊</span>**，**<span class="font-bold text-red-500">不會直接開始導航</span>**。
-                    </p>
-                    <p v-else class="text-sm text-gray-700">
-                        系統將會為您開啟 Google 地圖，顯示 **<span class="font-bold text-[#8f5a5a]">{{ searchModalContent.location }}</span>** 周邊的 {{ searchModalContent.type }} 資訊，方便您快速導航或瀏覽評價。
-                    </p>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-3 mt-4">
-                    <button @click="showSearchModal = false" class="py-2 rounded bg-gray-100 text-gray-500 font-bold">取消</button>
-                    <button @click="confirmSearchAndOpenMap" class="py-2 rounded bg-blue-500 text-white font-bold flex items-center justify-center active:bg-blue-600">
-                        <i class="fa-solid fa-map-marked-alt mr-2"></i> 確認開啟地圖
-                    </button>
-                </div>
-            </div>
-        </div>
-
-
         <nav class="fixed bottom-6 left-4 right-4 bg-white/95 border border-white/20 shadow-xl rounded-2xl h-16 flex items-center justify-around z-40">
             <button @click="currentTab = 'itinerary'" class="flex flex-col items-center w-16" :class="currentTab === 'itinerary' ? 'text-[#788a6d]' : 'text-gray-400'"><i class="fa-solid fa-route text-lg"></i><span class="text-[10px]">行程</span></button>
             <button @click="currentTab = 'info'" class="flex flex-col items-center w-16" :class="currentTab === 'info' ? 'text-[#788a6d]' : 'text-gray-400'"><i class="fa-solid fa-suitcase text-lg"></i><span class="text-[10px]">資訊</span></button>
@@ -356,11 +317,6 @@
                 const editForm = ref({ time: '', name: '', type: 'spot', desc: '', transport: '', cost: '' });
                 const connectionStatus = ref('connecting');
 
-                // 搜尋彈窗狀態與內容
-                const showSearchModal = ref(false);
-                const searchModalContent = ref({ location: '', type: '', query: '' });
-
-
                 const flights = ref([{ type: "去程", code: "GK50", dep: "TPE 台北", arr: "KIX 大阪", depTime: "02:30", arrTime: "06:00", duration: "2h 30m" }, { type: "回程", code: "GK51", dep: "KIX 大阪", arr: "TPE 台北", depTime: "23:10", arrTime: "01:30+1", duration: "3h 20m" }]);
                 const hotels = ref([{ date: "2/28", name: "Dormy Inn Premium Wakayama", address: "和歌山市美園町3-36" }, { date: "3/1", name: "白浜御苑", address: "和歌山県西牟婁郡白浜町1011" }, { date: "3/2-3/5", name: "APA Hotel Namba", address: "大阪市浪速区湊町1-2-13" }]);
 
@@ -401,12 +357,11 @@
                 const addExpense = async () => {
                     if(!budgetForm.value.item || !budgetForm.value.amount || !budgetForm.value.payer) return;
                     try { 
-                        // 在 Firebase 寫入時，多存入 payer 欄位
                         await addDoc(collection(db, "expenses"), { 
                             item: budgetForm.value.item, 
                             amount: budgetForm.value.amount, 
                             category: budgetForm.value.category, 
-                            payer: budgetForm.value.payer, // 新增的欄位
+                            payer: budgetForm.value.payer, 
                             createdAt: serverTimestamp() 
                         }); 
                         budgetForm.value.item=''; budgetForm.value.amount=null; 
@@ -414,29 +369,20 @@
                 };
                 const deleteExpense = async (id) => { if(confirm('刪除？')) { try { await deleteDoc(doc(db, "expenses", id)); } catch (e) { alert("刪除失敗"); } } };
 
-                // ★★★ 更新：searchNearby 函式 (已移除 美食/景點 邏輯) ★★★
-                const searchNearby = (location, type) => {
-                    let query = location; // 預設使用地點名稱進行單純搜尋
+                // ★★★ 新增：直接跳轉地圖函式 openMap ★★★
+                const openMap = (location, type) => {
+                    let query = location; 
                     
                     if (type === '便利商店') {
                          query = `Convenience stores near ${location}`;
-                    } else { // 包含 'location' (單一地點)
-                        query = location; 
                     }
                     
-                    searchModalContent.value = { location, type, query };
-                    showSearchModal.value = true;
-                };
-
-                // 確認後開啟地圖
-                const confirmSearchAndOpenMap = () => {
-                    const { query } = searchModalContent.value;
-                    // 使用標準的 Google Map 搜尋 URL，讓地圖決定是顯示單一地點資訊頁還是多點搜尋結果。
-                    const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
+                    // 使用標準的 Google Map 搜尋 URL 格式
+                    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
                     window.open(mapUrl, '_blank');
-                    showSearchModal.value = false;
                 };
-                
+                // ★★★ 移除: searchNearby, confirmSearchAndOpenMap, getSearchIcon 函式 ★★★
+
                 const formatNumber = (n) => n ? n.toLocaleString() : '0';
                 const formatDate = (t) => { if(!t) return ''; const d = t.toDate ? t.toDate() : new Date(t); return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`; };
                 const getDotColor = (t) => ({'transport':'bg-gray-400','food':'bg-[#8f5a5a]','shopping':'bg-orange-400','hotel':'bg-indigo-400'}[t] || 'bg-[#788a6d]');
@@ -450,14 +396,6 @@
                     return 'bg-gray-100 text-gray-500'; 
                 };
                 
-                // 搜尋彈窗的圖示
-                const getSearchIcon = (t) => {
-                    if (t === 'location') return 'fa-solid fa-map-pin';
-                    if (t === '便利商店') return 'fa-solid fa-store';
-                    // 移除 美食/景點 圖示邏輯
-                    return 'fa-solid fa-magnifying-glass';
-                };
-
                 const getPageTitle = computed(() => ({'itinerary':'行程一覽','info':'資訊','budget':'記帳'}[currentTab.value]));
                 const currentDayDate = computed(() => tripData.value[currentDayIndex.value]?.date || '');
                 const totalSpent = computed(() => budgetItems.value.reduce((s,i)=>s+(i.amount||0),0));
@@ -468,9 +406,7 @@
                 return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, showModal, editForm, isEditingTheme, editIndex,
                     getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, formatNumber, formatDate, addExpense, deleteExpense,
                     getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData,
-                    connectionText, connectionColor, searchNearby, getPayerStyle,
-                    // 導覽功能新增
-                    showSearchModal, searchModalContent, confirmSearchAndOpenMap, getSearchIcon
+                    connectionText, connectionColor, openMap, getPayerStyle, // ★★★ 將 openMap 加入回傳清單 ★★★
                 };
             }
         }).mount('#app');

@@ -3,21 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 大阪和歌山遊</title>
+    <title>2026 大阪和歌山遊 (雲端記帳版)</title>
     
     <link rel="icon" href="icon.png" type="image/png">
     <link rel="apple-touch-icon" href="icon.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
 
     <style>
         body { -webkit-tap-highlight-color: transparent; background-color: #fdfcf8; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        /* 載入動畫 */
         #loading { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
         .spinner { width: 40px; height: 40px; border: 4px solid #eee; border-top-color: #788a6d; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -28,14 +24,8 @@
 
     <div id="loading">
         <div class="spinner"></div>
-        <p class="mt-4 text-gray-500 text-sm">正在載入...</p>
-        <p id="error-msg" class="mt-2 text-red-500 text-xs px-4 text-center"></p>
+        <p class="mt-4 text-gray-500 text-sm">正在連線雲端帳本...</p>
     </div>
-
-    <script>
-        window.onerror = function(msg) { document.getElementById('error-msg').innerText = "發生錯誤: " + msg; };
-        setTimeout(() => { if(document.getElementById('loading')) document.getElementById('error-msg').innerText = "載入稍慢，請稍候..."; }, 5000);
-    </script>
 
     <div id="app" v-cloak class="flex-1 flex flex-col h-full relative">
 
@@ -102,7 +92,6 @@
             </div>
 
             <div v-if="currentTab === 'info'" class="space-y-6 pt-4">
-                
                 <section>
                     <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Flights</h3>
                     <div class="bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm">
@@ -129,7 +118,6 @@
                         </div>
                     </div>
                 </section>
-
                 <section>
                     <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Hotels</h3>
                     <div class="space-y-3">
@@ -156,18 +144,20 @@
                 <div class="bg-[#333] text-white rounded-xl p-6 shadow-lg text-center relative overflow-hidden">
                     <p class="text-gray-400 text-xs uppercase tracking-widest">Total Spending</p>
                     <h2 class="text-3xl font-mono font-bold mt-1">¥{{ formatNumber(totalSpent) }}</h2>
-                    <p class="text-xs text-gray-500 mt-2">約 TWD {{ formatNumber(Math.round(totalSpent * 0.20)) }}</p>
+                    <p class="text-xs text-gray-500 mt-2">約 TWD {{ formatNumber(Math.round(totalSpent * 0.22)) }}</p>
                 </div>
                 <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
                     <form @submit.prevent="addExpense" class="space-y-3">
                         <div class="grid grid-cols-2 gap-3">
                             <input v-model="budgetForm.item" type="text" placeholder="品項" required class="col-span-2 w-full p-2 bg-gray-50 border rounded text-sm">
-                            <input v-model.number="budgetForm.amount" type="number" placeholder="金額" required class="w-full p-2 bg-gray-50 border rounded text-sm">
+                            <input v-model.number="budgetForm.amount" type="number" placeholder="金額 (日幣)" required class="w-full p-2 bg-gray-50 border rounded text-sm">
                             <select v-model="budgetForm.category" class="w-full p-2 bg-gray-50 border rounded text-sm">
                                 <option value="food">飲食</option><option value="transport">交通</option><option value="shopping">購物</option><option value="stay">住宿</option><option value="other">其他</option>
                             </select>
                         </div>
-                        <button type="submit" class="w-full bg-[#788a6d] text-white py-2 rounded font-bold text-sm shadow">記上一筆</button>
+                        <button type="submit" class="w-full bg-[#788a6d] text-white py-2 rounded font-bold text-sm shadow active:bg-[#5a6b51]">
+                            <i class="fa-solid fa-plus mr-1"></i> 記上一筆
+                        </button>
                     </form>
                 </div>
                 <div class="space-y-3">
@@ -234,11 +224,31 @@
         </nav>
     </div>
 
-    <script>
-        const { createApp, ref, computed, onMounted } = Vue;
+    <script type="module">
+        import { createApp, ref, computed, onMounted } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // 您的 Firebase 設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyC_89NqMZPOuhOAkIgGYZou-ArNGG7tr0I",
+            authDomain: "japan-trip-23e67.firebaseapp.com",
+            projectId: "japan-trip-23e67",
+            storageBucket: "japan-trip-23e67.firebasestorage.app",
+            messagingSenderId: "189410602668",
+            appId: "1:189410602668:web:51592ef3b0b5ab0c713909",
+            measurementId: "G-ZKSY80ZS3T"
+        };
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
         createApp({
             setup() {
+                // 行程資料 (手機端儲存 - LocalStorage)
+                const DB_TRIP = 'japan_trip_local_v5'; 
+                
                 const defaultTripData = [
                     { day: 1, date: "2/28", theme: "和歌山．加太線", spots: [{ time: "06:00", name: "關西機場", type: "transport", desc: "入境", tags: ["入境"], transport: "南海線" }, { time: "11:00", name: "淡嶋神社", type: "spot", desc: "加太線終點", tags: ["加太線"] }, { time: "13:00", name: "井出商店拉麵", type: "food", desc: "午餐", tags: ["必吃"], cost: "¥1000" }, { time: "16:00", name: "Dormy Inn", type: "hotel", desc: "Check-in", tags: ["住宿"] }] },
                     { day: 2, date: "3/1", theme: "南紀白濱溫泉", spots: [{ time: "09:00", name: "白濱站", type: "transport", desc: "前往白濱", tags: ["移動"], cost: "¥3740" }, { time: "11:00", name: "ToreTore 市場", type: "food", desc: "海鮮燒烤", tags: ["必吃"] }, { time: "16:00", name: "白浜御苑", type: "hotel", desc: "溫泉飯店", tags: ["溫泉"] }] },
@@ -247,8 +257,7 @@
                     { day: 5, date: "3/4", theme: "海遊館", spots: [{ time: "10:00", name: "海遊館", type: "spot", desc: "水族館", tags: ["親子"], cost: "¥580" }, { time: "16:00", name: "梅田", type: "shopping", desc: "購物", tags: ["購物"] }] },
                     { day: 6, date: "3/5", theme: "返程", spots: [{ time: "09:00", name: "難波八阪神社", type: "spot", desc: "獅子頭", tags: ["拍照"] }, { time: "20:00", name: "機場", type: "transport", desc: "登機", tags: ["離境"], cost: "¥970" }] }
                 ];
-                
-                // 新增的航班與住宿資料
+
                 const flights = ref([
                     { type: "去程", code: "GK50", dep: "TPE 台北", arr: "KIX 大阪", depTime: "02:30", arrTime: "06:00", duration: "2h 30m" },
                     { type: "回程", code: "GK51", dep: "KIX 大阪", arr: "TPE 台北", depTime: "23:10", arrTime: "01:30+1", duration: "3h 20m" }
@@ -259,6 +268,7 @@
                     { date: "3/2-3/5", name: "APA Hotel Namba", address: "大阪市浪速区湊町1-2-13" }
                 ]);
 
+                // 狀態管理
                 const currentTab = ref('itinerary');
                 const currentDayIndex = ref(0);
                 const tripData = ref([]);
@@ -270,21 +280,35 @@
                 const editIndex = ref(null);
                 const editForm = ref({ time: '', name: '', type: 'spot', desc: '', transport: '', cost: '' });
 
-                const loadData = () => {
-                    const savedTrip = localStorage.getItem('myTripData_2026_v3');
+                // 初始化載入
+                onMounted(() => {
+                    // 1. 載入行程 (LocalStorage)
+                    const savedTrip = localStorage.getItem(DB_TRIP);
                     tripData.value = savedTrip ? JSON.parse(savedTrip) : JSON.parse(JSON.stringify(defaultTripData));
-                    const savedBudget = localStorage.getItem('myBudgetData_2026_v3');
-                    budgetItems.value = savedBudget ? JSON.parse(savedBudget) : [];
-                    if(document.getElementById('loading')) document.getElementById('loading').remove();
-                };
 
-                const saveData = () => {
-                    localStorage.setItem('myTripData_2026_v3', JSON.stringify(tripData.value));
-                    localStorage.setItem('myBudgetData_2026_v3', JSON.stringify(budgetItems.value));
-                };
-                
-                const resetData = () => { if(confirm('確定重置？所有修改會消失。')) { tripData.value = JSON.parse(JSON.stringify(defaultTripData)); saveData(); } }
+                    // 2. 載入記帳 (Firebase 實時監聽)
+                    const q = query(collection(db, "expenses"), orderBy("createdAt", "desc"));
+                    onSnapshot(q, (snapshot) => {
+                        budgetItems.value = snapshot.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data()
+                        }));
+                        // 資料載入完畢，移除 Loading
+                        const loadingEl = document.getElementById('loading');
+                        if (loadingEl) loadingEl.remove();
+                    }, (error) => {
+                        console.error("Firebase Error:", error);
+                        alert("連線資料庫失敗，請檢查網路");
+                    });
+                });
 
+                // 行程儲存 (LocalStorage)
+                const saveTripData = () => {
+                    localStorage.setItem(DB_TRIP, JSON.stringify(tripData.value));
+                };
+                const resetData = () => { if(confirm('確定重置行程？所有行程修改會消失。')) { tripData.value = JSON.parse(JSON.stringify(defaultTripData)); saveTripData(); } };
+
+                // 行程編輯邏輯
                 const openEditSpot = (d, i) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=i; editForm.value={...tripData.value[d].spots[i], tags:''}; showModal.value=true; };
                 const addNewSpot = (d) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=null; editForm.value={time:'12:00', name:'', type:'spot', desc:'', transport:'', cost:''}; showModal.value=true; };
                 const openEditTheme = (d) => { isEditingTheme.value=true; editDayIndex.value=d; editForm.value.name=tripData.value[d].theme; showModal.value=true; };
@@ -296,17 +320,46 @@
                         else tripData.value[editDayIndex.value].spots.push(spot);
                         tripData.value[editDayIndex.value].spots.sort((a,b)=>a.time.localeCompare(b.time));
                     }
-                    saveData(); showModal.value=false;
+                    saveTripData(); showModal.value=false;
                 };
-                const deleteSpot = () => { if(confirm('刪除？')) { tripData.value[editDayIndex.value].spots.splice(editIndex.value, 1); saveData(); showModal.value=false; } };
+                const deleteSpot = () => { if(confirm('刪除？')) { tripData.value[editDayIndex.value].spots.splice(editIndex.value, 1); saveTripData(); showModal.value=false; } };
                 const closeModal = () => showModal.value=false;
 
-                const addExpense = () => { if(!budgetForm.value.item || !budgetForm.value.amount) return; budgetItems.value.push({id:Date.now(), ...budgetForm.value, createdAt:new Date().toISOString()}); saveData(); budgetForm.value.item=''; budgetForm.value.amount=null; };
-                const deleteExpense = (id) => { if(confirm('刪除？')) { budgetItems.value=budgetItems.value.filter(i=>i.id!==id); saveData(); } };
+                // ★★★ 記帳邏輯 (Firebase) ★★★
+                const addExpense = async () => {
+                    if(!budgetForm.value.item || !budgetForm.value.amount) return;
+                    try {
+                        await addDoc(collection(db, "expenses"), {
+                            item: budgetForm.value.item,
+                            amount: budgetForm.value.amount,
+                            category: budgetForm.value.category,
+                            createdAt: serverTimestamp() // 使用伺服器時間排序
+                        });
+                        budgetForm.value.item=''; budgetForm.value.amount=null;
+                    } catch (e) {
+                        alert("新增失敗: " + e.message);
+                    }
+                };
 
+                const deleteExpense = async (id) => {
+                    if(confirm('確定刪除這筆紀錄？')) {
+                        try {
+                            await deleteDoc(doc(db, "expenses", id));
+                        } catch (e) {
+                            alert("刪除失敗: " + e.message);
+                        }
+                    }
+                };
+
+                // 工具函式
                 const openMap = (d) => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(d)}`, '_blank');
                 const formatNumber = (n) => n ? n.toLocaleString() : '0';
-                const formatDate = (d) => { if(!d) return ''; const date = new Date(d); return `${date.getMonth()+1}/${date.getDate()}`; };
+                const formatDate = (t) => {
+                    if(!t) return '';
+                    // 處理 Firebase Timestamp
+                    const d = t.toDate ? t.toDate() : new Date(t);
+                    return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+                };
                 const getDotColor = (t) => ({'transport':'bg-gray-400','food':'bg-[#8f5a5a]','shopping':'bg-orange-400','hotel':'bg-indigo-400'}[t] || 'bg-[#788a6d]');
                 const getCategoryColor = (c) => ({'food':'bg-orange-500','transport':'bg-blue-500','shopping':'bg-pink-500','stay':'bg-indigo-500'}[c] || 'bg-gray-500');
                 const getCategoryIcon = (c) => `fa-solid ` + ({'food':'fa-utensils','transport':'fa-train','shopping':'fa-bag-shopping','stay':'fa-bed'}[c] || 'fa-tag');
@@ -314,9 +367,7 @@
                 const getPageTitle = computed(() => ({'itinerary':'行程一覽','info':'資訊','budget':'記帳'}[currentTab.value]));
                 const currentDayDate = computed(() => tripData.value[currentDayIndex.value]?.date || '');
                 const totalSpent = computed(() => budgetItems.value.reduce((s,i)=>s+(i.amount||0),0));
-                const sortedBudgetItems = computed(() => [...budgetItems.value].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)));
-
-                onMounted(loadData);
+                const sortedBudgetItems = computed(() => budgetItems.value); // 已由 Firebase 排序
 
                 return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, showModal, editForm, isEditingTheme, editIndex,
                     getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, openMap, formatNumber, formatDate, addExpense, deleteExpense,

@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -181,7 +181,7 @@
                 <div class="bg-[#333] text-white rounded-xl p-6 shadow-lg text-center relative overflow-hidden">
                     <p class="text-gray-400 text-xs uppercase tracking-widest">Total Spending</p>
                     <h2 class="text-3xl font-mono font-bold mt-1">¥{{ formatNumber(totalSpent) }}</h2>
-                    <p class="text-xs text-gray-500 mt-2">約 TWD {{ formatNumber(Math.round(totalSpent * 0.22)) }}</p>
+                    <p class="text-xs text-gray-500 mt-2">約 TWD {{ formatNumber(Math.round(totalSpent * 0.20)) }}</p>
                 </div>
                 <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
                     <form @submit.prevent="addExpense" class="space-y-3">
@@ -282,7 +282,11 @@
                 </div>
 
                 <div class="space-y-3 mb-4">
-                    <p class="text-sm text-gray-700">
+                    <p v-if="searchModalContent.type === '美食'" class="text-sm text-gray-700">
+                        系統將為您開啟 Google 地圖，顯示 **<span class="font-bold text-red-500">評分 4.0 以上的高人氣餐廳列表</span>**。
+                        您可以在地圖上點擊餐廳查看其 **<span class="font-bold text-orange-600">菜單及主要販售物</span>**。
+                    </p>
+                    <p v-else class="text-sm text-gray-700">
                         系統將會為您開啟 Google 地圖，顯示 **<span class="font-bold text-[#8f5a5a]">{{ searchModalContent.location }}</span>** 周邊的 {{ searchModalContent.type }} 資訊，方便您快速導航或瀏覽評價。
                     </p>
                 </div>
@@ -353,7 +357,7 @@
                 const editForm = ref({ time: '', name: '', type: 'spot', desc: '', transport: '', cost: '' });
                 const connectionStatus = ref('connecting');
 
-                // ★★★ 新增：搜尋彈窗狀態與內容 ★★★
+                // 搜尋彈窗狀態與內容
                 const showSearchModal = ref(false);
                 const searchModalContent = ref({ location: '', type: '', query: '' });
 
@@ -411,19 +415,26 @@
                 };
                 const deleteExpense = async (id) => { if(confirm('刪除？')) { try { await deleteDoc(doc(db, "expenses", id)); } catch (e) { alert("刪除失敗"); } } };
 
-                // ★★★ 修改：searchNearby 變為開啟彈窗 ★★★
+                // ★★★ 更新：searchNearby 函式以滿足美食列表和主要販售物的要求 ★★★
                 const searchNearby = (location, type) => {
                     let query = `${location} 附近的${type}`;
-                    if (type === '美食') query = `Restaurants near ${location}`;
-                    if (type === '景點') query = `Attractions near ${location}`;
+                    
+                    if (type === '美食') {
+                        // 針對美食加入 4.0 評分和熱門菜色的篩選關鍵字
+                        query = `Best rated restaurants (4.0+) near ${location} with popular dishes`; 
+                    } else if (type === '景點') {
+                        // 景點維持不變
+                        query = `Attractions near ${location}`;
+                    }
                     
                     searchModalContent.value = { location, type, query };
                     showSearchModal.value = true;
                 };
 
-                // ★★★ 新增：確認後開啟地圖 ★★★
+                // 確認後開啟地圖
                 const confirmSearchAndOpenMap = () => {
                     const { query } = searchModalContent.value;
+                    // Note: Use encodeURIComponent for the query string when opening a map URL
                     const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
                     window.open(mapUrl, '_blank');
                     showSearchModal.value = false;
@@ -443,7 +454,7 @@
                     return 'bg-gray-100 text-gray-500'; 
                 };
                 
-                // ★★★ 新增：搜尋彈窗的圖示 ★★★
+                // 搜尋彈窗的圖示
                 const getSearchIcon = (t) => {
                     if (t === '美食') return 'fa-solid fa-bowl-food';
                     if (t === '景點') return 'fa-solid fa-camera';

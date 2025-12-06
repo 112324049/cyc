@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>測試修復</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; text-align: center; }
+        .box { background: #e0f2fe; padding: 20px; border-radius: 10px; margin-top: 20px; }
+        button { padding: 10px 20px; background: #0ea5e9; color: white; border: none; border-radius: 5px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 維修測試模式</h1>
+    <p>如果您看得到這個畫面，代表 App 其實是正常的！</p>
+    
+    <div class="box">
+        <p>測試記憶功能：</p>
+        <h3 id="display">...</h3>
+        <button onclick="testSave()">點我儲存測試</button>
+    </div>
+
+    <script>
+        // 讀取
+        let saved = localStorage.getItem('test_data');
+        if (saved) {
+            document.getElementById('display').innerText = "✅ 讀取成功：已儲存 (" + saved + ")";
+        } else {
+            document.getElementById('display').innerText = "❌ 尚未儲存資料";
+        }
+
+        // 儲存
+        function testSave() {
+            let time = new Date().toLocaleTimeString();
+            localStorage.setItem('test_data', time);
+            document.getElementById('display').innerText = "✅ 剛剛已儲存：" + time;
+            alert("儲存成功！請重新整理網頁，看看這行字還在不在。");
+        }
+    </script>
+</body>
+</html>

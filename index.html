@@ -228,9 +228,17 @@
                     <form @submit.prevent="addShoppingItem" class="space-y-3">
                         <input v-model="shoppingForm.item" type="text" placeholder="想買的商品名稱..." required class="w-full p-2 bg-gray-50 border rounded text-sm">
                         
-                        <div class="grid grid-cols-3 gap-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <select v-model="shoppingForm.payer" required class="w-full p-2 bg-gray-50 border rounded text-sm">
+                                <option value="" disabled>-- 誰想買? --</option>
+                                <option value="陳小鯊">陳小鯊</option>
+                                <option value="黄臭豬">黄臭豬</option>
+                                <option value="共同">共同</option>
+                            </select>
+
                              <input v-model="shoppingForm.qty" type="number" placeholder="數量" min="1" class="w-full p-2 bg-gray-50 border rounded text-sm">
-                             <input v-model="shoppingForm.price" type="number" placeholder="預估單價 (日圓)" class="col-span-2 w-full p-2 bg-gray-50 border rounded text-sm">
+                             
+                             <input v-model="shoppingForm.price" type="number" placeholder="預估單價 (日圓, 可選)" class="col-span-2 w-full p-2 bg-gray-50 border rounded text-sm">
                         </div>
                         
                         <button type="submit" class="w-full bg-[#8f5a5a] text-white py-2 rounded font-bold text-sm shadow active:bg-[#7a4848]">
@@ -257,6 +265,9 @@
                             </div>
                         </div>
                         <div class="flex flex-col items-end">
+                            <span class="text-xs font-bold px-2 py-0.5 rounded mb-1" :class="getPayerStyle(item.payer)">
+                                {{ item.payer }}
+                            </span>
                             <span v-if="item.price" class="font-mono font-bold text-base">
                                 ¥{{ formatNumber(item.qty * item.price) }}
                             </span>
@@ -334,7 +345,7 @@
 
         createApp({
             setup() {
-                const DB_TRIP = 'japan_trip_local_v15'; // 更新版本號
+                const DB_TRIP = 'japan_trip_local_v15';
                 
                 const currentTab = ref('itinerary');
                 const currentDayIndex = ref(0);
@@ -355,9 +366,9 @@
                 const budgetItems = ref([]);
                 const budgetForm = ref({ item: '', amount: null, category: 'food', payer: '陳小鯊' });
                 
-                // ★★★ 購物清單狀態 ★★★
+                // 購物清單狀態 (新增 payer 預設值)
                 const shoppingItems = ref([]);
-                const shoppingForm = ref({ item: '', qty: 1, price: null });
+                const shoppingForm = ref({ item: '', qty: 1, price: null, payer: '共同' }); // 預設為共同
 
                 const showModal = ref(false);
                 const isEditingTheme = ref(false);
@@ -383,11 +394,10 @@
                             connectionStatus.value = 'connected';
                         }, (err) => { connectionStatus.value = 'error'; console.error("Firebase Budget Error:", err); });
 
-                        // ★★★ 載入購物清單資料 ★★★
+                        // 載入購物清單資料
                         const qShopping = query(collection(db, "shopping"), orderBy("createdAt", "desc"));
                         onSnapshot(qShopping, (snapshot) => {
                             shoppingItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            // 保持 connectionStatus 狀態，避免覆蓋
                         }, (err) => { console.error("Firebase Shopping Error:", err); });
 
                     } catch (e) { connectionStatus.value = 'error'; }
@@ -428,18 +438,20 @@
                 const deleteExpense = async (id) => { if(confirm('刪除此筆記帳？')) { try { await deleteDoc(doc(db, "expenses", id)); } catch (e) { alert("刪除失敗"); } } };
 
 
-                // ★★★ 購物清單相關功能 ★★★
+                // 購物清單相關功能
                 const addShoppingItem = async () => {
-                    if(!shoppingForm.value.item) return;
+                    // 確保商品名稱和購買人必填
+                    if(!shoppingForm.value.item || !shoppingForm.value.payer) return;
                     try {
                         await addDoc(collection(db, "shopping"), {
                             item: shoppingForm.value.item,
-                            qty: shoppingForm.value.qty > 0 ? shoppingForm.value.qty : 1, // 數量至少為 1
-                            price: shoppingForm.value.price > 0 ? shoppingForm.value.price : null, // 預估價可為空
+                            qty: shoppingForm.value.qty > 0 ? shoppingForm.value.qty : 1,
+                            price: shoppingForm.value.price > 0 ? shoppingForm.value.price : null,
+                            payer: shoppingForm.value.payer, // ★★★ 新增 payer 欄位 ★★★
                             isBought: false,
                             createdAt: serverTimestamp()
                         });
-                        shoppingForm.value = { item: '', qty: 1, price: null }; // 重設表單
+                        shoppingForm.value = { item: '', qty: 1, price: null, payer: '共同' }; // 重設表單，payer 設回預設
                     } catch (e) {
                         alert("加入清單失敗");
                         console.error("Error adding shopping item: ", e);
@@ -471,7 +483,6 @@
                         }
                     }
                 };
-                // ★★★ 購物清單功能結束 ★★★
 
 
                 const openMap = (location, type) => {
@@ -501,7 +512,7 @@
                 const totalSpent = computed(() => budgetItems.value.reduce((s,i)=>s+(i.amount||0),0));
                 const sortedBudgetItems = computed(() => budgetItems.value);
                 
-                // ★★★ 排序購物清單：未買的在前，已買的在後 ★★★
+                // 排序購物清單：未買的在前，已買的在後
                 const sortedShoppingItems = computed(() => {
                     return [...shoppingItems.value].sort((a, b) => {
                         if (a.isBought && !b.isBought) return 1;
@@ -516,7 +527,7 @@
                 return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, shoppingItems: sortedShoppingItems, shoppingForm, 
                     showModal, editForm, isEditingTheme, editIndex,
                     getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, formatNumber, formatDate, 
-                    addExpense, deleteExpense, addShoppingItem, deleteShoppingItem, toggleBought, // 新增購物清單相關函式
+                    addExpense, deleteExpense, addShoppingItem, deleteShoppingItem, toggleBought,
                     getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData,
                     connectionText, connectionColor, openMap, getPayerStyle, 
                 };

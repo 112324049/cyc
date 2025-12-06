@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>2026 大阪和歌山遊</title>
     
-    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/4338/4338658.png">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/4338/4338658.png">
+    <link rel="icon" href="icon.jpg" type="image/jpeg">
+    <link rel="apple-touch-icon" href="icon.jpg">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -15,9 +15,8 @@
         body { -webkit-tap-highlight-color: transparent; background-color: #fdfcf8; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         [v-cloak] { display: none; }
-        /* 錯誤訊息框 (隱藏) */
+        /* 錯誤訊息框 */
         #crash-screen { display: none; padding: 20px; color: red; font-family: monospace; background: #fff0f0; height: 100vh; z-index: 99999; position: fixed; inset: 0; }
-        /* 導遊按鈕特效 */
         .guide-btn { transition: all 0.2s; }
         .guide-btn:active { transform: scale(0.95); opacity: 0.8; }
     </style>
@@ -74,7 +73,7 @@
                         <span class="text-xs text-[#8f5a5a] font-bold uppercase tracking-wider">Today's Theme <i class="fa-solid fa-pen ml-1 opacity-50"></i></span>
                         <h3 class="text-lg font-bold mt-1 text-gray-800">{{ tripData[currentDayIndex].theme }}</h3>
                     </div>
-                    <i class="fa-solid fa-mountain-sun text-gray-300 text-2xl opacity-50"></i>
+                    <i class="fa-solid fa-torii-gate text-red-500 text-2xl opacity-80"></i>
                 </div>
 
                 <div v-if="tripData[currentDayIndex]" class="space-y-4 relative pl-2">
@@ -104,10 +103,10 @@
 
                             <div class="mt-3 pt-3 border-t border-gray-100 flex gap-2">
                                 <button @click="searchNearby(spot.name, '美食')" class="guide-btn flex-1 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-xs font-bold flex items-center justify-center border border-orange-100">
-                                    <i class="fa-solid fa-utensils mr-1"></i> 找附近美食
+                                    <i class="fa-solid fa-utensils mr-1"></i> 找美食
                                 </button>
                                 <button @click="searchNearby(spot.name, '景點')" class="guide-btn flex-1 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold flex items-center justify-center border border-blue-100">
-                                    <i class="fa-solid fa-camera mr-1"></i> 找附近景點
+                                    <i class="fa-solid fa-camera mr-1"></i> 找景點
                                 </button>
                             </div>
                         </div>
@@ -286,12 +285,12 @@
 
         createApp({
             setup() {
-                const DB_TRIP = 'japan_trip_local_v13'; 
+                const DB_TRIP = 'japan_trip_local_v14'; 
                 
                 const currentTab = ref('itinerary');
                 const currentDayIndex = ref(0);
                 
-                // 預設資料
+                // ★★★ 預設資料 (初始化即載入，防止 undefined 崩潰) ★★★
                 const defaultTripData = [
                     { day: 1, date: "2/28", theme: "和歌山．加太線", spots: [{ time: "06:00", name: "關西機場", type: "transport", desc: "入境", tags: ["入境"], transport: "南海線" }, { time: "11:00", name: "淡嶋神社", type: "spot", desc: "加太線終點", tags: ["加太線"] }, { time: "13:00", name: "井出商店拉麵", type: "food", desc: "午餐", tags: ["必吃"], cost: "¥1000" }, { time: "16:00", name: "Dormy Inn", type: "hotel", desc: "Check-in", tags: ["住宿"] }] },
                     { day: 2, date: "3/1", theme: "南紀白濱溫泉", spots: [{ time: "09:00", name: "白濱站", type: "transport", desc: "前往白濱", tags: ["移動"], cost: "¥3740" }, { time: "11:00", name: "ToreTore 市場", type: "food", desc: "海鮮燒烤", tags: ["必吃"] }, { time: "16:00", name: "白浜御苑", type: "hotel", desc: "溫泉飯店", tags: ["溫泉"] }] },
@@ -301,7 +300,9 @@
                     { day: 6, date: "3/5", theme: "返程", spots: [{ time: "09:00", name: "難波八阪神社", type: "spot", desc: "獅子頭", tags: ["拍照"] }, { time: "20:00", name: "機場", type: "transport", desc: "登機", tags: ["離境"], cost: "¥970" }] }
                 ];
                 
+                // 使用 JSON 複製一份，確保不連動
                 const tripData = ref(JSON.parse(JSON.stringify(defaultTripData)));
+
                 const budgetItems = ref([]);
                 const budgetForm = ref({ item: '', amount: null, category: 'food' });
                 const showModal = ref(false);

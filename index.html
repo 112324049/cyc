@@ -47,7 +47,7 @@
                 <span class="block text-2xl font-bold">{{ currentDayDate }}</span>
                 <span class="text-xs text-gray-400">Day {{ currentDayIndex + 1 }}</span>
             </div>
-            <div v-if="currentTab === 'budget'" class="text-right">
+            <div v-if="currentTab === 'budget' || currentTab === 'shopping'" class="text-right">
                 <div class="flex items-center justify-end text-xs text-gray-400">
                     <span class="w-2 h-2 rounded-full mr-1" :class="connectionColor"></span>
                     {{ connectionText }}
@@ -222,6 +222,50 @@
                     </div>
                 </div>
             </div>
+
+            <div v-if="currentTab === 'shopping'" class="space-y-6 pt-4">
+                <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                    <form @submit.prevent="addShoppingItem" class="space-y-3">
+                        <input v-model="shoppingForm.item" type="text" placeholder="想買的商品名稱..." required class="w-full p-2 bg-gray-50 border rounded text-sm">
+                        
+                        <div class="grid grid-cols-3 gap-3">
+                             <input v-model="shoppingForm.qty" type="number" placeholder="數量" min="1" class="w-full p-2 bg-gray-50 border rounded text-sm">
+                             <input v-model="shoppingForm.price" type="number" placeholder="預估單價 (日圓)" class="col-span-2 w-full p-2 bg-gray-50 border rounded text-sm">
+                        </div>
+                        
+                        <button type="submit" class="w-full bg-[#8f5a5a] text-white py-2 rounded font-bold text-sm shadow active:bg-[#7a4848]">
+                            <i class="fa-solid fa-cart-shopping mr-1"></i> 加入購物清單
+                        </button>
+                    </form>
+                </div>
+
+                <div class="space-y-3">
+                    <div v-if="connectionStatus === 'connecting'" class="text-center py-4 text-gray-400 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-1"></i> 載入中...</div>
+                    <div v-else-if="shoppingItems.length === 0" class="text-center py-8 text-gray-400 text-sm">清單目前是空的喔！</div>
+
+                    <div v-for="item in shoppingItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center shadow-sm transition-all" :class="{'opacity-50': item.isBought}">
+                        <div class="flex items-center">
+                            <button @click="toggleBought(item.id)" class="w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3 transition-all flex-shrink-0" :class="item.isBought ? 'bg-[#788a6d] text-white' : 'border-2 border-gray-300 text-gray-500'">
+                                <i class="fa-solid" :class="item.isBought ? 'fa-check' : 'fa-list'"></i>
+                            </button>
+                            <div :class="{'line-through text-gray-400': item.isBought}">
+                                <p class="font-bold text-sm">{{ item.item }}</p>
+                                <p class="text-[10px] text-gray-500 mt-0.5">
+                                    數量: <span class="font-bold">{{ item.qty }}</span> 
+                                    <span v-if="item.price"> | 預估單價: ¥{{ formatNumber(item.price) }}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <span v-if="item.price" class="font-mono font-bold text-base">
+                                ¥{{ formatNumber(item.qty * item.price) }}
+                            </span>
+                            <button @click="deleteShoppingItem(item.id)" class="text-gray-300 hover:text-red-500 mt-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </main>
 
         <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm" @click.self="closeModal">
@@ -264,6 +308,7 @@
         <nav class="fixed bottom-6 left-4 right-4 bg-white/95 border border-white/20 shadow-xl rounded-2xl h-16 flex items-center justify-around z-40">
             <button @click="currentTab = 'itinerary'" class="flex flex-col items-center w-16" :class="currentTab === 'itinerary' ? 'text-[#788a6d]' : 'text-gray-400'"><i class="fa-solid fa-route text-lg"></i><span class="text-[10px]">行程</span></button>
             <button @click="currentTab = 'info'" class="flex flex-col items-center w-16" :class="currentTab === 'info' ? 'text-[#788a6d]' : 'text-gray-400'"><i class="fa-solid fa-suitcase text-lg"></i><span class="text-[10px]">資訊</span></button>
+            <button @click="currentTab = 'shopping'" class="flex flex-col items-center w-16" :class="currentTab === 'shopping' ? 'text-[#8f5a5a]' : 'text-gray-400'"><i class="fa-solid fa-cart-shopping text-lg"></i><span class="text-[10px]">購物</span></button>
             <button @click="currentTab = 'budget'" class="flex flex-col items-center w-16" :class="currentTab === 'budget' ? 'text-[#788a6d]' : 'text-gray-400'"><i class="fa-solid fa-yen-sign text-lg"></i><span class="text-[10px]">記帳</span></button>
         </nav>
     </div>
@@ -271,7 +316,7 @@
     <script type="module">
         import { createApp, ref, computed, onMounted } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // Firebase Config
         const firebaseConfig = {
@@ -289,7 +334,7 @@
 
         createApp({
             setup() {
-                const DB_TRIP = 'japan_trip_local_v14'; 
+                const DB_TRIP = 'japan_trip_local_v15'; // 更新版本號
                 
                 const currentTab = ref('itinerary');
                 const currentDayIndex = ref(0);
@@ -310,6 +355,10 @@
                 const budgetItems = ref([]);
                 const budgetForm = ref({ item: '', amount: null, category: 'food', payer: '陳小鯊' });
                 
+                // ★★★ 購物清單狀態 ★★★
+                const shoppingItems = ref([]);
+                const shoppingForm = ref({ item: '', qty: 1, price: null });
+
                 const showModal = ref(false);
                 const isEditingTheme = ref(false);
                 const editDayIndex = ref(null);
@@ -327,11 +376,20 @@
                     }
 
                     try {
-                        const q = query(collection(db, "expenses"), orderBy("createdAt", "desc"));
-                        onSnapshot(q, (snapshot) => {
+                        // 載入記帳資料
+                        const qBudget = query(collection(db, "expenses"), orderBy("createdAt", "desc"));
+                        onSnapshot(qBudget, (snapshot) => {
                             budgetItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                             connectionStatus.value = 'connected';
-                        }, (err) => { connectionStatus.value = 'error'; console.error(err); });
+                        }, (err) => { connectionStatus.value = 'error'; console.error("Firebase Budget Error:", err); });
+
+                        // ★★★ 載入購物清單資料 ★★★
+                        const qShopping = query(collection(db, "shopping"), orderBy("createdAt", "desc"));
+                        onSnapshot(qShopping, (snapshot) => {
+                            shoppingItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            // 保持 connectionStatus 狀態，避免覆蓋
+                        }, (err) => { console.error("Firebase Shopping Error:", err); });
+
                     } catch (e) { connectionStatus.value = 'error'; }
                 });
 
@@ -365,23 +423,65 @@
                             createdAt: serverTimestamp() 
                         }); 
                         budgetForm.value.item=''; budgetForm.value.amount=null; 
-                    } catch (e) { alert("上傳失敗"); }
+                    } catch (e) { alert("記帳失敗"); }
                 };
-                const deleteExpense = async (id) => { if(confirm('刪除？')) { try { await deleteDoc(doc(db, "expenses", id)); } catch (e) { alert("刪除失敗"); } } };
+                const deleteExpense = async (id) => { if(confirm('刪除此筆記帳？')) { try { await deleteDoc(doc(db, "expenses", id)); } catch (e) { alert("刪除失敗"); } } };
 
-                // ★★★ 新增：直接跳轉地圖函式 openMap ★★★
+
+                // ★★★ 購物清單相關功能 ★★★
+                const addShoppingItem = async () => {
+                    if(!shoppingForm.value.item) return;
+                    try {
+                        await addDoc(collection(db, "shopping"), {
+                            item: shoppingForm.value.item,
+                            qty: shoppingForm.value.qty > 0 ? shoppingForm.value.qty : 1, // 數量至少為 1
+                            price: shoppingForm.value.price > 0 ? shoppingForm.value.price : null, // 預估價可為空
+                            isBought: false,
+                            createdAt: serverTimestamp()
+                        });
+                        shoppingForm.value = { item: '', qty: 1, price: null }; // 重設表單
+                    } catch (e) {
+                        alert("加入清單失敗");
+                        console.error("Error adding shopping item: ", e);
+                    }
+                };
+
+                const deleteShoppingItem = async (id) => {
+                    if(confirm('確定刪除此購物項目？')) {
+                        try {
+                            await deleteDoc(doc(db, "shopping", id));
+                        } catch (e) {
+                            alert("刪除失敗");
+                            console.error("Error deleting shopping item: ", e);
+                        }
+                    }
+                };
+
+                const toggleBought = async (id) => {
+                    const itemRef = doc(db, "shopping", id);
+                    const currentItem = shoppingItems.value.find(i => i.id === id);
+                    if (currentItem) {
+                        try {
+                            await updateDoc(itemRef, {
+                                isBought: !currentItem.isBought
+                            });
+                        } catch (e) {
+                            alert("更新狀態失敗");
+                            console.error("Error updating shopping item status: ", e);
+                        }
+                    }
+                };
+                // ★★★ 購物清單功能結束 ★★★
+
+
                 const openMap = (location, type) => {
                     let query = location; 
-                    
                     if (type === '便利商店') {
                          query = `Convenience stores near ${location}`;
                     }
-                    
-                    // 使用標準的 Google Map 搜尋 URL 格式
                     const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
                     window.open(mapUrl, '_blank');
                 };
-                // ★★★ 移除: searchNearby, confirmSearchAndOpenMap, getSearchIcon 函式 ★★★
 
                 const formatNumber = (n) => n ? n.toLocaleString() : '0';
                 const formatDate = (t) => { if(!t) return ''; const d = t.toDate ? t.toDate() : new Date(t); return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`; };
@@ -396,17 +496,29 @@
                     return 'bg-gray-100 text-gray-500'; 
                 };
                 
-                const getPageTitle = computed(() => ({'itinerary':'行程一覽','info':'資訊','budget':'記帳'}[currentTab.value]));
+                const getPageTitle = computed(() => ({'itinerary':'行程一覽','info':'資訊','budget':'記帳','shopping':'購物清單'}[currentTab.value]));
                 const currentDayDate = computed(() => tripData.value[currentDayIndex.value]?.date || '');
                 const totalSpent = computed(() => budgetItems.value.reduce((s,i)=>s+(i.amount||0),0));
                 const sortedBudgetItems = computed(() => budgetItems.value);
+                
+                // ★★★ 排序購物清單：未買的在前，已買的在後 ★★★
+                const sortedShoppingItems = computed(() => {
+                    return [...shoppingItems.value].sort((a, b) => {
+                        if (a.isBought && !b.isBought) return 1;
+                        if (!a.isBought && b.isBought) return -1;
+                        return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+                    });
+                });
+                
                 const connectionText = computed(() => ({'connecting':'連線中','connected':'已連線','error':'離線'}[connectionStatus.value]));
                 const connectionColor = computed(() => ({'connecting':'bg-yellow-500','connected':'bg-green-500','error':'bg-red-500'}[connectionStatus.value]));
 
-                return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, showModal, editForm, isEditingTheme, editIndex,
-                    getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, formatNumber, formatDate, addExpense, deleteExpense,
+                return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, shoppingItems: sortedShoppingItems, shoppingForm, 
+                    showModal, editForm, isEditingTheme, editIndex,
+                    getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, formatNumber, formatDate, 
+                    addExpense, deleteExpense, addShoppingItem, deleteShoppingItem, toggleBought, // 新增購物清單相關函式
                     getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData,
-                    connectionText, connectionColor, openMap, getPayerStyle, // ★★★ 將 openMap 加入回傳清單 ★★★
+                    connectionText, connectionColor, openMap, getPayerStyle, 
                 };
             }
         }).mount('#app');

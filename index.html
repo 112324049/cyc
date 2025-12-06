@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -187,8 +187,17 @@
                     <form @submit.prevent="addExpense" class="space-y-3">
                         <div class="grid grid-cols-2 gap-3">
                             <input v-model="budgetForm.item" type="text" placeholder="品項" required class="col-span-2 w-full p-2 bg-gray-50 border rounded text-sm">
+                            
+                            <select v-model="budgetForm.payer" required class="w-full p-2 bg-gray-50 border rounded text-sm">
+                                <option value="" disabled>-- 誰付的? --</option>
+                                <option value="User">User</option>
+                                <option value="Partner">Partner</option>
+                                <option value="Joint">共同</option>
+                            </select>
+
                             <input v-model.number="budgetForm.amount" type="number" placeholder="金額 (日幣)" required class="w-full p-2 bg-gray-50 border rounded text-sm">
-                            <select v-model="budgetForm.category" class="w-full p-2 bg-gray-50 border rounded text-sm">
+                            
+                            <select v-model="budgetForm.category" class="col-span-2 w-full p-2 bg-gray-50 border rounded text-sm">
                                 <option value="food">飲食</option><option value="transport">交通</option><option value="shopping">購物</option><option value="stay">住宿</option><option value="other">其他</option>
                             </select>
                         </div>
@@ -211,9 +220,12 @@
                                 <p class="text-[10px] text-gray-400">{{ formatDate(item.createdAt) }}</p>
                             </div>
                         </div>
-                        <div class="flex items-center">
-                            <span class="font-mono font-bold mr-3">¥{{ formatNumber(item.amount) }}</span>
-                            <button @click="deleteExpense(item.id)" class="text-gray-300 hover:text-red-500"><i class="fa-solid fa-trash"></i></button>
+                        <div class="flex flex-col items-end">
+                             <span class="text-xs font-bold px-2 py-0.5 rounded" :class="getPayerStyle(item.payer)">
+                                {{ item.payer }}
+                            </span>
+                            <span class="font-mono font-bold mt-1">¥{{ formatNumber(item.amount) }}</span>
+                            <button @click="deleteExpense(item.id)" class="text-gray-300 hover:text-red-500 mt-1"><i class="fa-solid fa-trash text-xs"></i></button>
                         </div>
                     </div>
                 </div>
@@ -290,7 +302,7 @@
                 const currentTab = ref('itinerary');
                 const currentDayIndex = ref(0);
                 
-                // ★★★ 預設資料 (初始化即載入，防止 undefined 崩潰) ★★★
+                // 預設資料
                 const defaultTripData = [
                     { day: 1, date: "2/28", theme: "和歌山．加太線", spots: [{ time: "06:00", name: "關西機場", type: "transport", desc: "入境", tags: ["入境"], transport: "南海線" }, { time: "11:00", name: "淡嶋神社", type: "spot", desc: "加太線終點", tags: ["加太線"] }, { time: "13:00", name: "井出商店拉麵", type: "food", desc: "午餐", tags: ["必吃"], cost: "¥1000" }, { time: "16:00", name: "Dormy Inn", type: "hotel", desc: "Check-in", tags: ["住宿"] }] },
                     { day: 2, date: "3/1", theme: "南紀白濱溫泉", spots: [{ time: "09:00", name: "白濱站", type: "transport", desc: "前往白濱", tags: ["移動"], cost: "¥3740" }, { time: "11:00", name: "ToreTore 市場", type: "food", desc: "海鮮燒烤", tags: ["必吃"] }, { time: "16:00", name: "白浜御苑", type: "hotel", desc: "溫泉飯店", tags: ["溫泉"] }] },
@@ -304,7 +316,9 @@
                 const tripData = ref(JSON.parse(JSON.stringify(defaultTripData)));
 
                 const budgetItems = ref([]);
-                const budgetForm = ref({ item: '', amount: null, category: 'food' });
+                // ★★★ 記帳表單新增 payer 欄位，預設為 User ★★★
+                const budgetForm = ref({ item: '', amount: null, category: 'food', payer: 'User' });
+                
                 const showModal = ref(false);
                 const isEditingTheme = ref(false);
                 const editDayIndex = ref(null);
@@ -333,7 +347,7 @@
                 const saveTripData = () => { localStorage.setItem(DB_TRIP, JSON.stringify(tripData.value)); };
                 const resetData = () => { if(confirm('重置行程？')) { tripData.value = JSON.parse(JSON.stringify(defaultTripData)); saveTripData(); } };
 
-                const openEditSpot = (d, i) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=i; editForm.value={...tripData.value[d].spots[i], tags:''}; showModal.value=true; };
+                const openEditSpot = (d, i) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=i; editForm.value={...tripData.value[d].spots[i], tags:[]}; showModal.value=true; };
                 const addNewSpot = (d) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=null; editForm.value={time:'12:00', name:'', type:'spot', desc:'', transport:'', cost:''}; showModal.value=true; };
                 const openEditTheme = (d) => { isEditingTheme.value=true; editDayIndex.value=d; editForm.value.name=tripData.value[d].theme; showModal.value=true; };
                 const saveEdit = () => {
@@ -350,8 +364,18 @@
                 const closeModal = () => showModal.value=false;
 
                 const addExpense = async () => {
-                    if(!budgetForm.value.item || !budgetForm.value.amount) return;
-                    try { await addDoc(collection(db, "expenses"), { item: budgetForm.value.item, amount: budgetForm.value.amount, category: budgetForm.value.category, createdAt: serverTimestamp() }); budgetForm.value.item=''; budgetForm.value.amount=null; } catch (e) { alert("上傳失敗"); }
+                    if(!budgetForm.value.item || !budgetForm.value.amount || !budgetForm.value.payer) return;
+                    try { 
+                        // ★★★ 在 Firebase 寫入時，多存入 payer 欄位 ★★★
+                        await addDoc(collection(db, "expenses"), { 
+                            item: budgetForm.value.item, 
+                            amount: budgetForm.value.amount, 
+                            category: budgetForm.value.category, 
+                            payer: budgetForm.value.payer, // 新增的欄位
+                            createdAt: serverTimestamp() 
+                        }); 
+                        budgetForm.value.item=''; budgetForm.value.amount=null; 
+                    } catch (e) { alert("上傳失敗"); }
                 };
                 const deleteExpense = async (id) => { if(confirm('刪除？')) { try { await deleteDoc(doc(db, "expenses", id)); } catch (e) { alert("刪除失敗"); } } };
 
@@ -370,6 +394,14 @@
                 const getCategoryColor = (c) => ({'food':'bg-orange-500','transport':'bg-blue-500','shopping':'bg-pink-500','stay':'bg-indigo-500'}[c] || 'bg-gray-500');
                 const getCategoryIcon = (c) => `fa-solid ` + ({'food':'fa-utensils','transport':'fa-train','shopping':'fa-bag-shopping','stay':'fa-bed'}[c] || 'fa-tag');
                 
+                // ★★★ 依付款人設定顏色 ★★★
+                const getPayerStyle = (p) => {
+                    if (p === 'User') return 'bg-purple-100 text-purple-600';
+                    if (p === 'Partner') return 'bg-teal-100 text-teal-600';
+                    if (p === 'Joint') return 'bg-gray-100 text-gray-500';
+                    return 'bg-gray-100 text-gray-500';
+                };
+
                 const getPageTitle = computed(() => ({'itinerary':'行程一覽','info':'資訊','budget':'記帳'}[currentTab.value]));
                 const currentDayDate = computed(() => tripData.value[currentDayIndex.value]?.date || '');
                 const totalSpent = computed(() => budgetItems.value.reduce((s,i)=>s+(i.amount||0),0));
@@ -380,7 +412,7 @@
                 return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, showModal, editForm, isEditingTheme, editIndex,
                     getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, openMap, formatNumber, formatDate, addExpense, deleteExpense,
                     getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData,
-                    connectionText, connectionColor, searchNearby
+                    connectionText, connectionColor, searchNearby, getPayerStyle
                 };
             }
         }).mount('#app');

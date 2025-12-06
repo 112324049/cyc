@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>2026 大阪和歌山遊</title>
     
+    <link rel="icon" href="icon.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -14,7 +17,7 @@
     <style>
         body { -webkit-tap-highlight-color: transparent; background-color: #fdfcf8; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        /* 載入中的動畫 */
+        /* 載入動畫 */
         #loading { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
         .spinner { width: 40px; height: 40px; border: 4px solid #eee; border-top-color: #788a6d; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -25,21 +28,13 @@
 
     <div id="loading">
         <div class="spinner"></div>
-        <p class="mt-4 text-gray-500 text-sm">正在載入行程...</p>
+        <p class="mt-4 text-gray-500 text-sm">正在載入...</p>
         <p id="error-msg" class="mt-2 text-red-500 text-xs px-4 text-center"></p>
     </div>
 
     <script>
-        window.onerror = function(msg, url, line) {
-            document.getElementById('error-msg').innerText = "發生錯誤: " + msg;
-            alert("程式無法執行：\n" + msg);
-        };
-        // 3秒後如果還在轉圈圈，就顯示警告
-        setTimeout(() => {
-            if(document.getElementById('loading')) {
-                document.getElementById('error-msg').innerText = "載入太久了，可能是網路擋住了 CDN。";
-            }
-        }, 5000);
+        window.onerror = function(msg) { document.getElementById('error-msg').innerText = "發生錯誤: " + msg; };
+        setTimeout(() => { if(document.getElementById('loading')) document.getElementById('error-msg').innerText = "載入稍慢，請稍候..."; }, 5000);
     </script>
 
     <div id="app" v-cloak class="flex-1 flex flex-col h-full relative">
@@ -77,20 +72,15 @@
 
                 <div class="space-y-4 relative pl-2">
                     <div class="absolute left-[21px] top-4 bottom-4 w-0.5 bg-gray-200"></div>
-
                     <div v-for="(spot, sIndex) in tripData[currentDayIndex].spots" :key="sIndex" class="relative pl-8">
-                        <div class="absolute left-[14px] top-5 w-4 h-4 rounded-full border-2 border-white shadow-sm z-10" 
-                             :class="getDotColor(spot.type)"></div>
-
+                        <div class="absolute left-[14px] top-5 w-4 h-4 rounded-full border-2 border-white shadow-sm z-10" :class="getDotColor(spot.type)"></div>
                         <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm relative">
                             <button @click="openEditSpot(currentDayIndex, sIndex)" class="absolute top-2 right-2 text-gray-300 hover:text-[#788a6d] p-2"><i class="fa-solid fa-pen-to-square"></i></button>
-                            
                             <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ spot.time }}</span>
                             <h4 class="text-lg font-bold mt-1 flex items-center">{{ spot.name }} 
                                 <button @click.stop="openMap(spot.name)" class="ml-2 text-gray-300 text-sm"><i class="fa-solid fa-location-arrow"></i></button>
                             </h4>
                             <p v-if="spot.desc" class="text-sm text-gray-600 mt-1 whitespace-pre-line">{{ spot.desc }}</p>
-
                             <div class="flex flex-wrap gap-2 mt-2">
                                 <span v-for="tag in spot.tags" :key="tag" class="text-[10px] font-bold px-2 py-1 rounded bg-[#8f5a5a] bg-opacity-10 text-[#8f5a5a]">{{ tag }}</span>
                                 <span v-if="spot.transport" class="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-600"><i class="fa-solid fa-train mr-1"></i>{{ spot.transport }}</span>
@@ -100,9 +90,8 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="pl-8 pt-2">
-                        <button @click="addNewSpot(currentDayIndex)" class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 font-bold hover:border-[#788a6d] hover:text-[#788a6d] transition-colors">
+                        <button @click="addNewSpot(currentDayIndex)" class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 font-bold hover:border-[#788a6d] hover:text-[#788a6d]">
                             <i class="fa-solid fa-plus"></i> 新增行程
                         </button>
                     </div>
@@ -112,8 +101,55 @@
                 </div>
             </div>
 
-            <div v-if="currentTab === 'info'" class="pt-4 text-center text-gray-500 text-sm">
-                <p>切換到「行程」或「記帳」來使用功能</p>
+            <div v-if="currentTab === 'info'" class="space-y-6 pt-4">
+                
+                <section>
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Flights</h3>
+                    <div class="bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                        <div v-for="(flight, idx) in flights" :key="idx" class="p-4 border-b border-gray-100 last:border-0">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[#8f5a5a] font-bold text-xs px-2 py-0.5 bg-[#8f5a5a]/10 rounded">{{ flight.type }}</span>
+                                <span class="font-mono text-sm text-gray-500">{{ flight.code }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <div class="text-center">
+                                    <div class="text-xl font-bold">{{ flight.depTime }}</div>
+                                    <div class="text-xs text-gray-400">{{ flight.dep }}</div>
+                                </div>
+                                <div class="flex-1 px-4 flex flex-col items-center">
+                                    <i class="fa-solid fa-plane text-[#788a6d] text-xs"></i>
+                                    <div class="h-[1px] w-full bg-gray-200 mt-1"></div>
+                                    <span class="text-[10px] text-gray-400 mt-1">{{ flight.duration }}</span>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-xl font-bold">{{ flight.arrTime }}</div>
+                                    <div class="text-xs text-gray-400">{{ flight.arr }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Hotels</h3>
+                    <div class="space-y-3">
+                        <div v-for="(hotel, idx) in hotels" :key="idx" class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                            <div class="flex items-start">
+                                <div class="bg-[#788a6d]/10 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-[#788a6d] mr-3">
+                                    <i class="fa-solid fa-bed"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold">{{ hotel.name }}</h4>
+                                    <p class="text-xs text-gray-500 mt-1 mb-2">{{ hotel.date }}</p>
+                                    <p class="text-sm text-gray-600 leading-snug">{{ hotel.address }}</p>
+                                    <button @click="openMap(hotel.name)" class="mt-3 text-xs text-[#788a6d] font-bold flex items-center">
+                                        <i class="fa-solid fa-map-pin mr-1"></i> 導航到飯店
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
 
             <div v-if="currentTab === 'budget'" class="space-y-6 pt-4">
@@ -122,7 +158,6 @@
                     <h2 class="text-3xl font-mono font-bold mt-1">¥{{ formatNumber(totalSpent) }}</h2>
                     <p class="text-xs text-gray-500 mt-2">約 TWD {{ formatNumber(Math.round(totalSpent * 0.22)) }}</p>
                 </div>
-
                 <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
                     <form @submit.prevent="addExpense" class="space-y-3">
                         <div class="grid grid-cols-2 gap-3">
@@ -135,7 +170,6 @@
                         <button type="submit" class="w-full bg-[#788a6d] text-white py-2 rounded font-bold text-sm shadow">記上一筆</button>
                     </form>
                 </div>
-
                 <div class="space-y-3">
                     <div v-for="item in sortedBudgetItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center shadow-sm">
                         <div class="flex items-center">
@@ -213,6 +247,17 @@
                     { day: 5, date: "3/4", theme: "海遊館", spots: [{ time: "10:00", name: "海遊館", type: "spot", desc: "水族館", tags: ["親子"], cost: "¥580" }, { time: "16:00", name: "梅田", type: "shopping", desc: "購物", tags: ["購物"] }] },
                     { day: 6, date: "3/5", theme: "返程", spots: [{ time: "09:00", name: "難波八阪神社", type: "spot", desc: "獅子頭", tags: ["拍照"] }, { time: "20:00", name: "機場", type: "transport", desc: "登機", tags: ["離境"], cost: "¥970" }] }
                 ];
+                
+                // 新增的航班與住宿資料
+                const flights = ref([
+                    { type: "去程", code: "GK50", dep: "TPE 台北", arr: "KIX 大阪", depTime: "02:30", arrTime: "06:00", duration: "2h 30m" },
+                    { type: "回程", code: "GK51", dep: "KIX 大阪", arr: "TPE 台北", depTime: "23:10", arrTime: "01:30+1", duration: "3h 20m" }
+                ]);
+                const hotels = ref([
+                    { date: "2/28", name: "Dormy Inn Premium Wakayama", address: "和歌山市美園町3-36" },
+                    { date: "3/1", name: "白浜御苑 (大江戸温泉物語)", address: "和歌山県西牟婁郡白浜町1011" },
+                    { date: "3/2-3/5", name: "APA Hotel Namba", address: "大阪市浪速区湊町1-2-13" }
+                ]);
 
                 const currentTab = ref('itinerary');
                 const currentDayIndex = ref(0);
@@ -230,7 +275,6 @@
                     tripData.value = savedTrip ? JSON.parse(savedTrip) : JSON.parse(JSON.stringify(defaultTripData));
                     const savedBudget = localStorage.getItem('myBudgetData_2026_v3');
                     budgetItems.value = savedBudget ? JSON.parse(savedBudget) : [];
-                    // 資料載入成功，移除 Loading 畫面
                     if(document.getElementById('loading')) document.getElementById('loading').remove();
                 };
 
@@ -239,14 +283,8 @@
                     localStorage.setItem('myBudgetData_2026_v3', JSON.stringify(budgetItems.value));
                 };
                 
-                const resetData = () => {
-                    if(confirm('確定重置？所有修改會消失。')) {
-                        tripData.value = JSON.parse(JSON.stringify(defaultTripData));
-                        saveData();
-                    }
-                }
+                const resetData = () => { if(confirm('確定重置？所有修改會消失。')) { tripData.value = JSON.parse(JSON.stringify(defaultTripData)); saveData(); } }
 
-                // Edit Logic
                 const openEditSpot = (d, i) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=i; editForm.value={...tripData.value[d].spots[i], tags:''}; showModal.value=true; };
                 const addNewSpot = (d) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=null; editForm.value={time:'12:00', name:'', type:'spot', desc:'', transport:'', cost:''}; showModal.value=true; };
                 const openEditTheme = (d) => { isEditingTheme.value=true; editDayIndex.value=d; editForm.value.name=tripData.value[d].theme; showModal.value=true; };
@@ -263,11 +301,9 @@
                 const deleteSpot = () => { if(confirm('刪除？')) { tripData.value[editDayIndex.value].spots.splice(editIndex.value, 1); saveData(); showModal.value=false; } };
                 const closeModal = () => showModal.value=false;
 
-                // Budget Logic
                 const addExpense = () => { if(!budgetForm.value.item || !budgetForm.value.amount) return; budgetItems.value.push({id:Date.now(), ...budgetForm.value, createdAt:new Date().toISOString()}); saveData(); budgetForm.value.item=''; budgetForm.value.amount=null; };
                 const deleteExpense = (id) => { if(confirm('刪除？')) { budgetItems.value=budgetItems.value.filter(i=>i.id!==id); saveData(); } };
 
-                // Utils
                 const openMap = (d) => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(d)}`, '_blank');
                 const formatNumber = (n) => n ? n.toLocaleString() : '0';
                 const formatDate = (d) => { if(!d) return ''; const date = new Date(d); return `${date.getMonth()+1}/${date.getDate()}`; };
@@ -275,7 +311,6 @@
                 const getCategoryColor = (c) => ({'food':'bg-orange-500','transport':'bg-blue-500','shopping':'bg-pink-500','stay':'bg-indigo-500'}[c] || 'bg-gray-500');
                 const getCategoryIcon = (c) => `fa-solid ` + ({'food':'fa-utensils','transport':'fa-train','shopping':'fa-bag-shopping','stay':'fa-bed'}[c] || 'fa-tag');
                 
-                // Computed
                 const getPageTitle = computed(() => ({'itinerary':'行程一覽','info':'資訊','budget':'記帳'}[currentTab.value]));
                 const currentDayDate = computed(() => tripData.value[currentDayIndex.value]?.date || '');
                 const totalSpent = computed(() => budgetItems.value.reduce((s,i)=>s+(i.amount||0),0));
@@ -283,7 +318,7 @@
 
                 onMounted(loadData);
 
-                return { currentTab, currentDayIndex, tripData, budgetItems, budgetForm, showModal, editForm, isEditingTheme, editIndex,
+                return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, showModal, editForm, isEditingTheme, editIndex,
                     getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, openMap, formatNumber, formatDate, addExpense, deleteExpense,
                     getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData
                 };

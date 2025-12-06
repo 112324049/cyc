@@ -4,215 +4,199 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>2026 大阪和歌山遊</title>
-    <meta name="theme-color" content="#Fdfcf8">
     
     <script src="https://cdn.tailwindcss.com"></script>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+JP:wght@600&display=swap" rel="stylesheet">
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'washi': '#Fdfcf8', 'charcoal': '#333333', 'matcha': '#788a6d', 'adzuki': '#8f5a5a', 'border-light': '#e5e5e5'
-                    },
-                    fontFamily: { 'serif': ['"Noto Serif JP"', 'serif'], 'sans': ['"Noto Sans TC"', 'sans-serif'] }
-                }
-            }
-        }
-    </script>
     <style>
-        body { -webkit-tap-highlight-color: transparent; }
+        body { -webkit-tap-highlight-color: transparent; background-color: #fdfcf8; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .modal-enter-active, .modal-leave-active { transition: opacity 0.3s ease; }
-        .modal-enter-from, .modal-leave-to { opacity: 0; }
+        /* 載入中的動畫 */
+        #loading { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #eee; border-top-color: #788a6d; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        [v-cloak] { display: none; }
     </style>
 </head>
-<body class="bg-washi text-charcoal font-sans antialiased h-screen overflow-hidden flex flex-col">
+<body class="text-gray-800 font-sans h-screen overflow-hidden flex flex-col">
 
-    <div id="app" class="flex-1 flex flex-col h-full overflow-hidden relative">
+    <div id="loading">
+        <div class="spinner"></div>
+        <p class="mt-4 text-gray-500 text-sm">正在載入行程...</p>
+        <p id="error-msg" class="mt-2 text-red-500 text-xs px-4 text-center"></p>
+    </div>
 
-        <header class="pt-6 pb-4 px-6 flex justify-between items-end bg-washi z-10 border-b border-gray-100">
+    <script>
+        window.onerror = function(msg, url, line) {
+            document.getElementById('error-msg').innerText = "發生錯誤: " + msg;
+            alert("程式無法執行：\n" + msg);
+        };
+        // 3秒後如果還在轉圈圈，就顯示警告
+        setTimeout(() => {
+            if(document.getElementById('loading')) {
+                document.getElementById('error-msg').innerText = "載入太久了，可能是網路擋住了 CDN。";
+            }
+        }, 5000);
+    </script>
+
+    <div id="app" v-cloak class="flex-1 flex flex-col h-full relative">
+
+        <header class="pt-6 pb-4 px-6 flex justify-between items-end bg-[#Fdfcf8] border-b border-gray-100 z-10">
             <div>
-                <h2 class="text-xs font-bold tracking-widest text-matcha uppercase mb-1">JAPAN TRIP 2026</h2>
-                <h1 class="text-2xl font-serif font-bold text-charcoal">{{ getPageTitle }}</h1>
+                <h2 class="text-xs font-bold tracking-widest text-[#788a6d] uppercase mb-1">JAPAN TRIP 2026</h2>
+                <h1 class="text-2xl font-bold">{{ getPageTitle }}</h1>
             </div>
             <div v-if="currentTab === 'itinerary'" class="text-right">
-                <span class="block text-2xl font-serif">{{ currentDayDate }}</span>
-                <span class="text-xs text-gray-500">Day {{ currentDayIndex + 1 }}</span>
+                <span class="block text-2xl font-bold">{{ currentDayDate }}</span>
+                <span class="text-xs text-gray-400">Day {{ currentDayIndex + 1 }}</span>
             </div>
         </header>
 
-        <main class="flex-1 overflow-y-auto no-scrollbar pb-24 px-4 scroll-smooth">
+        <main class="flex-1 overflow-y-auto no-scrollbar pb-24 px-4 bg-[#Fdfcf8]">
             
-            <div v-if="currentTab === 'itinerary'" class="space-y-6 pt-2">
+            <div v-if="currentTab === 'itinerary'" class="space-y-6 pt-4">
                 <div class="flex space-x-3 overflow-x-auto pb-2 no-scrollbar">
                     <button v-for="(day, index) in tripData" :key="index" @click="currentDayIndex = index"
-                        class="flex-shrink-0 w-14 h-16 rounded-xl flex flex-col items-center justify-center transition-all duration-300 border"
-                        :class="currentDayIndex === index ? 'bg-matcha text-white border-matcha shadow-lg transform scale-105' : 'bg-white text-gray-400 border-border-light'">
+                        class="flex-shrink-0 w-14 h-16 rounded-xl flex flex-col items-center justify-center border transition-all"
+                        :class="currentDayIndex === index ? 'bg-[#788a6d] text-white shadow-lg scale-105' : 'bg-white text-gray-400 border-gray-200'">
                         <span class="text-xs font-bold">Day</span>
-                        <span class="text-lg font-serif font-bold">{{ index + 1 }}</span>
+                        <span class="text-lg font-bold">{{ index + 1 }}</span>
                     </button>
                 </div>
 
-                <div @click="openEditTheme(currentDayIndex)" class="bg-white rounded-xl p-4 border border-border-light shadow-sm flex items-center justify-between cursor-pointer active:scale-95 transition-transform">
+                <div @click="openEditTheme(currentDayIndex)" class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition-transform">
                     <div>
-                        <span class="text-xs text-adzuki font-bold uppercase tracking-wider flex items-center">
-                            Today's Theme <i class="fa-solid fa-pen ml-2 text-[10px] opacity-50"></i>
-                        </span>
+                        <span class="text-xs text-[#8f5a5a] font-bold uppercase tracking-wider">Today's Theme <i class="fa-solid fa-pen ml-1 opacity-50"></i></span>
                         <h3 class="text-lg font-bold mt-1">{{ tripData[currentDayIndex].theme }}</h3>
                     </div>
-                    <i class="fa-solid fa-cloud-sun text-gray-400 text-xl"></i>
+                    <i class="fa-solid fa-cloud-sun text-gray-300 text-xl"></i>
                 </div>
 
                 <div class="space-y-4 relative pl-2">
                     <div class="absolute left-[21px] top-4 bottom-4 w-0.5 bg-gray-200"></div>
 
-                    <div v-for="(spot, sIndex) in tripData[currentDayIndex].spots" :key="sIndex" class="relative pl-8 group">
-                        <div class="absolute left-[14px] top-5 w-4 h-4 rounded-full border-2 border-white shadow-sm z-10" :class="getDotColor(spot.type)"></div>
+                    <div v-for="(spot, sIndex) in tripData[currentDayIndex].spots" :key="sIndex" class="relative pl-8">
+                        <div class="absolute left-[14px] top-5 w-4 h-4 rounded-full border-2 border-white shadow-sm z-10" 
+                             :class="getDotColor(spot.type)"></div>
 
-                        <div class="bg-white rounded-xl p-4 border border-border-light shadow-sm relative">
-                            <button @click="openEditSpot(currentDayIndex, sIndex)" class="absolute top-2 right-2 text-gray-300 hover:text-matcha p-2">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-
-                            <div class="flex justify-between items-start mb-2 pr-6">
-                                <span class="text-xs font-bold text-gray-500 font-mono bg-gray-100 px-2 py-0.5 rounded">{{ spot.time }}</span>
-                            </div>
+                        <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm relative">
+                            <button @click="openEditSpot(currentDayIndex, sIndex)" class="absolute top-2 right-2 text-gray-300 hover:text-[#788a6d] p-2"><i class="fa-solid fa-pen-to-square"></i></button>
                             
-                            <h4 class="text-lg font-bold text-charcoal mb-1 flex items-center">
-                                {{ spot.name }}
-                                <button @click.stop="openMap(spot.name)" class="ml-2 text-gray-300 hover:text-matcha text-sm"><i class="fa-solid fa-location-arrow"></i></button>
+                            <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ spot.time }}</span>
+                            <h4 class="text-lg font-bold mt-1 flex items-center">{{ spot.name }} 
+                                <button @click.stop="openMap(spot.name)" class="ml-2 text-gray-300 text-sm"><i class="fa-solid fa-location-arrow"></i></button>
                             </h4>
-                            
-                            <p v-if="spot.desc" class="text-sm text-gray-600 mb-2 leading-relaxed whitespace-pre-line">{{ spot.desc }}</p>
+                            <p v-if="spot.desc" class="text-sm text-gray-600 mt-1 whitespace-pre-line">{{ spot.desc }}</p>
 
                             <div class="flex flex-wrap gap-2 mt-2">
-                                <span v-for="tag in spot.tags" :key="tag" class="text-[10px] font-bold px-2 py-1 rounded bg-opacity-10 text-adzuki bg-adzuki">{{ tag }}</span>
+                                <span v-for="tag in spot.tags" :key="tag" class="text-[10px] font-bold px-2 py-1 rounded bg-[#8f5a5a] bg-opacity-10 text-[#8f5a5a]">{{ tag }}</span>
                                 <span v-if="spot.transport" class="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-600"><i class="fa-solid fa-train mr-1"></i>{{ spot.transport }}</span>
                             </div>
-                            
-                            <div v-if="spot.cost" class="mt-3 pt-2 border-t border-dashed border-gray-200 text-xs text-gray-500 flex justify-between items-center">
-                                <span>預估費用</span><span class="font-mono font-bold">{{ spot.cost }}</span>
+                            <div v-if="spot.cost" class="mt-2 pt-2 border-t border-dashed border-gray-200 text-xs text-gray-500 flex justify-between">
+                                <span>費用</span><span class="font-mono font-bold">{{ spot.cost }}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="relative pl-8 pt-2 pb-8">
-                        <button @click="addNewSpot(currentDayIndex)" class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 font-bold text-sm hover:border-matcha hover:text-matcha">
-                            <i class="fa-solid fa-plus mr-1"></i> 新增行程
+                    <div class="pl-8 pt-2">
+                        <button @click="addNewSpot(currentDayIndex)" class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 font-bold hover:border-[#788a6d] hover:text-[#788a6d] transition-colors">
+                            <i class="fa-solid fa-plus"></i> 新增行程
                         </button>
                     </div>
-                    
-                    <div class="text-center pb-8">
+                     <div class="text-center pb-8 pt-4">
                         <button @click="resetData" class="text-xs text-gray-300 underline">重置回預設行程</button>
                     </div>
                 </div>
             </div>
 
-            <div v-if="currentTab === 'info'" class="space-y-6 pt-2">
-                <section>
-                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Flights & Hotels</h3>
-                    <div class="bg-white rounded-xl p-4 border border-border-light shadow-sm text-center text-gray-500 text-sm">
-                        此頁面功能與行程相同，暫略以節省載入資源。
-                    </div>
-                </section>
+            <div v-if="currentTab === 'info'" class="pt-4 text-center text-gray-500 text-sm">
+                <p>切換到「行程」或「記帳」來使用功能</p>
             </div>
 
-            <div v-if="currentTab === 'budget'" class="space-y-6 pt-2">
-                <div class="bg-charcoal text-white rounded-xl p-6 shadow-lg text-center relative overflow-hidden">
-                    <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Total Spending</p>
-                    <h2 class="text-3xl font-mono font-bold">¥{{ formatNumber(totalSpent) }}</h2>
+            <div v-if="currentTab === 'budget'" class="space-y-6 pt-4">
+                <div class="bg-[#333] text-white rounded-xl p-6 shadow-lg text-center relative overflow-hidden">
+                    <p class="text-gray-400 text-xs uppercase tracking-widest">Total Spending</p>
+                    <h2 class="text-3xl font-mono font-bold mt-1">¥{{ formatNumber(totalSpent) }}</h2>
                     <p class="text-xs text-gray-500 mt-2">約 TWD {{ formatNumber(Math.round(totalSpent * 0.22)) }}</p>
                 </div>
 
-                <div class="bg-white rounded-xl p-5 border border-border-light shadow-sm">
-                    <h3 class="text-sm font-bold mb-4">新增消費</h3>
+                <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
                     <form @submit.prevent="addExpense" class="space-y-3">
                         <div class="grid grid-cols-2 gap-3">
-                            <input v-model="budgetForm.item" type="text" placeholder="品項" required class="col-span-2 w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm">
-                            <input v-model.number="budgetForm.amount" type="number" placeholder="金額" required class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm">
-                            <select v-model="budgetForm.category" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                            <input v-model="budgetForm.item" type="text" placeholder="品項" required class="col-span-2 w-full p-2 bg-gray-50 border rounded text-sm">
+                            <input v-model.number="budgetForm.amount" type="number" placeholder="金額" required class="w-full p-2 bg-gray-50 border rounded text-sm">
+                            <select v-model="budgetForm.category" class="w-full p-2 bg-gray-50 border rounded text-sm">
                                 <option value="food">飲食</option><option value="transport">交通</option><option value="shopping">購物</option><option value="stay">住宿</option><option value="other">其他</option>
                             </select>
                         </div>
-                        <button type="submit" class="w-full bg-matcha text-white py-2.5 rounded-lg font-bold text-sm shadow-md">記上一筆</button>
+                        <button type="submit" class="w-full bg-[#788a6d] text-white py-2 rounded font-bold text-sm shadow">記上一筆</button>
                     </form>
                 </div>
 
                 <div class="space-y-3">
-                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest pl-1">History</h3>
-                    <div v-if="budgetItems.length === 0" class="text-center py-8 text-gray-400 text-sm">尚未有消費紀錄</div>
-                    <div v-for="item in sortedBudgetItems" :key="item.id" class="bg-white p-4 rounded-xl border border-border-light flex justify-between items-center shadow-sm">
+                    <div v-for="item in sortedBudgetItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center shadow-sm">
                         <div class="flex items-center">
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs mr-3" :class="getCategoryColor(item.category)">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs mr-3 text-white" :class="getCategoryColor(item.category)">
                                 <i :class="getCategoryIcon(item.category)"></i>
                             </div>
                             <div>
-                                <p class="font-bold text-sm text-charcoal">{{ item.item }}</p>
+                                <p class="font-bold text-sm">{{ item.item }}</p>
                                 <p class="text-[10px] text-gray-400">{{ formatDate(item.createdAt) }}</p>
                             </div>
                         </div>
                         <div class="flex items-center">
-                            <span class="font-mono font-bold text-charcoal mr-3">¥{{ formatNumber(item.amount) }}</span>
-                            <button @click="deleteExpense(item.id)" class="text-gray-300 hover:text-red-500"><i class="fa-solid fa-trash text-xs"></i></button>
+                            <span class="font-mono font-bold mr-3">¥{{ formatNumber(item.amount) }}</span>
+                            <button @click="deleteExpense(item.id)" class="text-gray-300 hover:text-red-500"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
                 </div>
             </div>
-
         </main>
 
-        <transition name="modal">
-            <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center px-4">
-                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeModal"></div>
-                <div class="bg-white rounded-2xl w-full max-w-sm p-6 relative z-10 shadow-2xl">
-                    <h3 class="text-lg font-bold mb-4 text-center">{{ isEditingTheme ? '編輯主題' : '編輯行程' }}</h3>
-                    <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                        <div v-if="!isEditingTheme">
-                            <label class="text-xs font-bold text-gray-500 block mb-1">時間</label>
-                            <input v-model="editForm.time" type="time" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm">
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-gray-500 block mb-1">名稱</label>
-                            <input v-model="editForm.name" type="text" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold">
-                        </div>
-                        <div v-if="!isEditingTheme">
-                            <label class="text-xs font-bold text-gray-500 block mb-1">類型</label>
-                            <select v-model="editForm.type" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm">
-                                <option value="spot">景點</option><option value="food">飲食</option><option value="transport">交通</option><option value="shopping">購物</option><option value="hotel">住宿</option>
-                            </select>
-                        </div>
-                        <div v-if="!isEditingTheme">
-                            <label class="text-xs font-bold text-gray-500 block mb-1">備註</label>
-                            <textarea v-model="editForm.desc" rows="3" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm"></textarea>
-                        </div>
-                        <div v-if="!isEditingTheme">
-                             <label class="text-xs font-bold text-gray-500 block mb-1">預估費用</label>
-                             <input v-model="editForm.cost" type="text" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm">
-                        </div>
-                        <div v-if="!isEditingTheme && editIndex !== null" class="pt-2">
-                             <button @click="deleteSpot" class="text-red-500 text-xs font-bold w-full text-center py-2"><i class="fa-solid fa-trash mr-1"></i> 刪除此行程</button>
-                        </div>
+        <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm" @click.self="closeModal">
+            <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+                <h3 class="text-lg font-bold mb-4 text-center">{{ isEditingTheme ? '編輯主題' : '編輯行程' }}</h3>
+                <div class="space-y-3 max-h-[60vh] overflow-y-auto">
+                    <div v-if="!isEditingTheme">
+                        <label class="text-xs font-bold text-gray-500">時間</label>
+                        <input v-model="editForm.time" type="time" class="w-full border rounded p-2 text-sm">
                     </div>
-                    <div class="grid grid-cols-2 gap-3 mt-6">
-                        <button @click="closeModal" class="py-2.5 rounded-xl font-bold text-gray-500 bg-gray-100">取消</button>
-                        <button @click="saveEdit" class="py-2.5 rounded-xl font-bold text-white bg-matcha shadow-md">儲存</button>
+                    <div>
+                        <label class="text-xs font-bold text-gray-500">名稱</label>
+                        <input v-model="editForm.name" type="text" class="w-full border rounded p-2 text-sm font-bold">
+                    </div>
+                    <div v-if="!isEditingTheme">
+                        <label class="text-xs font-bold text-gray-500">類型</label>
+                        <select v-model="editForm.type" class="w-full border rounded p-2 text-sm">
+                            <option value="spot">景點</option><option value="food">飲食</option><option value="transport">交通</option><option value="shopping">購物</option><option value="hotel">住宿</option>
+                        </select>
+                    </div>
+                    <div v-if="!isEditingTheme">
+                        <label class="text-xs font-bold text-gray-500">備註</label>
+                        <textarea v-model="editForm.desc" rows="3" class="w-full border rounded p-2 text-sm"></textarea>
+                    </div>
+                    <div v-if="!isEditingTheme">
+                        <label class="text-xs font-bold text-gray-500">費用</label>
+                        <input v-model="editForm.cost" type="text" class="w-full border rounded p-2 text-sm">
+                    </div>
+                    <div v-if="!isEditingTheme && editIndex !== null" class="pt-2">
+                        <button @click="deleteSpot" class="text-red-500 text-xs w-full py-2">刪除此行程</button>
                     </div>
                 </div>
+                <div class="grid grid-cols-2 gap-3 mt-4">
+                    <button @click="closeModal" class="py-2 rounded bg-gray-100 text-gray-500 font-bold">取消</button>
+                    <button @click="saveEdit" class="py-2 rounded bg-[#788a6d] text-white font-bold">儲存</button>
+                </div>
             </div>
-        </transition>
+        </div>
 
-        <nav class="fixed bottom-6 left-4 right-4 bg-white/90 backdrop-blur-md border border-white/20 shadow-[0_8px_30px_rgba(0,0,0,0.12)] rounded-2xl h-16 flex items-center justify-around z-40">
-            <button @click="currentTab = 'itinerary'" class="flex flex-col items-center justify-center w-16 h-full transition-colors relative" :class="currentTab === 'itinerary' ? 'text-matcha' : 'text-gray-400'"><i class="fa-solid fa-route text-lg mb-1"></i><span class="text-[10px] font-medium">行程</span><div v-if="currentTab === 'itinerary'" class="absolute -bottom-1 w-1 h-1 bg-matcha rounded-full"></div></button>
-            <button @click="currentTab = 'info'" class="flex flex-col items-center justify-center w-16 h-full transition-colors relative" :class="currentTab === 'info' ? 'text-matcha' : 'text-gray-400'"><i class="fa-solid fa-suitcase text-lg mb-1"></i><span class="text-[10px] font-medium">資訊</span><div v-if="currentTab === 'info'" class="absolute -bottom-1 w-1 h-1 bg-matcha rounded-full"></div></button>
-            <button @click="currentTab = 'budget'" class="flex flex-col items-center justify-center w-16 h-full transition-colors relative" :class="currentTab === 'budget' ? 'text-matcha' : 'text-gray-400'"><i class="fa-solid fa-yen-sign text-lg mb-1"></i><span class="text-[10px] font-medium">記帳</span><div v-if="currentTab === 'budget'" class="absolute -bottom-1 w-1 h-1 bg-matcha rounded-full"></div></button>
+        <nav class="fixed bottom-6 left-4 right-4 bg-white/95 border border-white/20 shadow-xl rounded-2xl h-16 flex items-center justify-around z-40">
+            <button @click="currentTab = 'itinerary'" class="flex flex-col items-center w-16" :class="currentTab === 'itinerary' ? 'text-[#788a6d]' : 'text-gray-400'"><i class="fa-solid fa-route text-lg"></i><span class="text-[10px]">行程</span></button>
+            <button @click="currentTab = 'info'" class="flex flex-col items-center w-16" :class="currentTab === 'info' ? 'text-[#788a6d]' : 'text-gray-400'"><i class="fa-solid fa-suitcase text-lg"></i><span class="text-[10px]">資訊</span></button>
+            <button @click="currentTab = 'budget'" class="flex flex-col items-center w-16" :class="currentTab === 'budget' ? 'text-[#788a6d]' : 'text-gray-400'"><i class="fa-solid fa-yen-sign text-lg"></i><span class="text-[10px]">記帳</span></button>
         </nav>
     </div>
 
@@ -222,12 +206,12 @@
         createApp({
             setup() {
                 const defaultTripData = [
-                    { day: 1, date: "2/28", theme: "和歌山．加太線", spots: [{ time: "06:00", name: "關西機場 (KIX)", type: "transport", desc: "抵達、入境", tags: ["入境"], transport: "南海線" }, { time: "08:00", name: "和歌山城", type: "spot", desc: "日本百名城之一", tags: ["歷史"], transport: "JR和歌山" }, { time: "11:00", name: "淡嶋神社", type: "spot", desc: "加太線終點", tags: ["加太線"], transport: "加太線" }, { time: "13:00", name: "井出商店拉麵", type: "food", desc: "拉麵老店", tags: ["必吃"], cost: "¥1000" }, { time: "16:00", name: "Dormy Inn", type: "hotel", desc: "Check-in", tags: ["住宿"], transport: "步行" }] },
-                    { day: 2, date: "3/1", theme: "南紀白濱溫泉", spots: [{ time: "09:00", name: "白濱站", type: "transport", desc: "搭黑潮號", tags: ["指定席"], transport: "JR特急", cost: "¥3740" }, { time: "11:00", name: "ToreTore 市場", type: "food", desc: "海鮮燒烤", tags: ["必吃"] }, { time: "13:30", name: "千疊敷 & 三段壁", type: "spot", desc: "壯觀海景", tags: ["自然"] }, { time: "16:00", name: "白浜御苑", type: "hotel", desc: "溫泉飯店", tags: ["溫泉"] }] },
-                    { day: 3, date: "3/2", theme: "回大阪．難波", spots: [{ time: "09:00", name: "圓月島", type: "spot", desc: "拍照景點", tags: ["拍照"] }, { time: "11:00", name: "前往大阪", type: "transport", desc: "返回市區", tags: ["移動"], cost: "¥5380" }, { time: "15:00", name: "道頓堀", type: "shopping", desc: "逛街", tags: ["購物"] }] },
-                    { day: 4, date: "3/3", theme: "環球影城", spots: [{ time: "07:30", name: "USJ 環球影城", type: "spot", desc: "全日遊玩", tags: ["必去"], transport: "JR", cost: "¥760" }, { time: "19:00", name: "CityWalk", type: "food", desc: "晚餐", tags: ["晚餐"] }] },
-                    { day: 5, date: "3/4", theme: "海遊館", spots: [{ time: "10:00", name: "海遊館", type: "spot", desc: "水族館", tags: ["親子"], cost: "¥580" }, { time: "13:00", name: "天保山摩天輪", type: "food", desc: "午餐觀景", tags: ["午餐"] }, { time: "16:00", name: "梅田", type: "shopping", desc: "採買", tags: ["購物"] }] },
-                    { day: 6, date: "3/5", theme: "返程", spots: [{ time: "09:00", name: "難波八阪神社", type: "spot", desc: "獅子頭", tags: ["拍照"] }, { time: "10:30", name: "黑門市場", type: "food", desc: "早午餐", tags: ["必吃"] }, { time: "20:00", name: "關西機場", type: "transport", desc: "登機", tags: ["離境"], cost: "¥970" }] }
+                    { day: 1, date: "2/28", theme: "和歌山．加太線", spots: [{ time: "06:00", name: "關西機場", type: "transport", desc: "入境", tags: ["入境"], transport: "南海線" }, { time: "11:00", name: "淡嶋神社", type: "spot", desc: "加太線終點", tags: ["加太線"] }, { time: "13:00", name: "井出商店拉麵", type: "food", desc: "午餐", tags: ["必吃"], cost: "¥1000" }, { time: "16:00", name: "Dormy Inn", type: "hotel", desc: "Check-in", tags: ["住宿"] }] },
+                    { day: 2, date: "3/1", theme: "南紀白濱溫泉", spots: [{ time: "09:00", name: "白濱站", type: "transport", desc: "前往白濱", tags: ["移動"], cost: "¥3740" }, { time: "11:00", name: "ToreTore 市場", type: "food", desc: "海鮮燒烤", tags: ["必吃"] }, { time: "16:00", name: "白浜御苑", type: "hotel", desc: "溫泉飯店", tags: ["溫泉"] }] },
+                    { day: 3, date: "3/2", theme: "回大阪．難波", spots: [{ time: "09:00", name: "圓月島", type: "spot", desc: "拍照", tags: ["拍照"] }, { time: "11:00", name: "回大阪", type: "transport", desc: "移動", cost: "¥5380" }, { time: "15:00", name: "道頓堀", type: "shopping", desc: "逛街", tags: ["購物"] }] },
+                    { day: 4, date: "3/3", theme: "環球影城", spots: [{ time: "07:30", name: "USJ", type: "spot", desc: "全日遊玩", tags: ["必去"], cost: "¥760" }, { time: "19:00", name: "CityWalk", type: "food", desc: "晚餐", tags: ["晚餐"] }] },
+                    { day: 5, date: "3/4", theme: "海遊館", spots: [{ time: "10:00", name: "海遊館", type: "spot", desc: "水族館", tags: ["親子"], cost: "¥580" }, { time: "16:00", name: "梅田", type: "shopping", desc: "購物", tags: ["購物"] }] },
+                    { day: 6, date: "3/5", theme: "返程", spots: [{ time: "09:00", name: "難波八阪神社", type: "spot", desc: "獅子頭", tags: ["拍照"] }, { time: "20:00", name: "機場", type: "transport", desc: "登機", tags: ["離境"], cost: "¥970" }] }
                 ];
 
                 const currentTab = ref('itinerary');
@@ -242,72 +226,60 @@
                 const editForm = ref({ time: '', name: '', type: 'spot', desc: '', transport: '', cost: '' });
 
                 const loadData = () => {
-                    const savedTrip = localStorage.getItem('myTripData_2026_v2');
+                    const savedTrip = localStorage.getItem('myTripData_2026_v3');
                     tripData.value = savedTrip ? JSON.parse(savedTrip) : JSON.parse(JSON.stringify(defaultTripData));
-                    const savedBudget = localStorage.getItem('myBudgetData_2026_v2');
+                    const savedBudget = localStorage.getItem('myBudgetData_2026_v3');
                     budgetItems.value = savedBudget ? JSON.parse(savedBudget) : [];
+                    // 資料載入成功，移除 Loading 畫面
+                    if(document.getElementById('loading')) document.getElementById('loading').remove();
                 };
 
                 const saveData = () => {
-                    localStorage.setItem('myTripData_2026_v2', JSON.stringify(tripData.value));
-                    localStorage.setItem('myBudgetData_2026_v2', JSON.stringify(budgetItems.value));
+                    localStorage.setItem('myTripData_2026_v3', JSON.stringify(tripData.value));
+                    localStorage.setItem('myBudgetData_2026_v3', JSON.stringify(budgetItems.value));
                 };
-
+                
                 const resetData = () => {
-                    if(confirm('重置將清除所有修改，確定嗎？')) {
+                    if(confirm('確定重置？所有修改會消失。')) {
                         tripData.value = JSON.parse(JSON.stringify(defaultTripData));
                         saveData();
                     }
-                };
+                }
 
-                const openEditSpot = (dayIdx, spotIdx) => {
-                    isEditingTheme.value = false; editDayIndex.value = dayIdx; editIndex.value = spotIdx;
-                    editForm.value = { ...tripData.value[dayIdx].spots[spotIdx], tags: '' };
-                    showModal.value = true;
-                };
-
-                const addNewSpot = (dayIdx) => {
-                    isEditingTheme.value = false; editDayIndex.value = dayIdx; editIndex.value = null;
-                    editForm.value = { time: '12:00', name: '', type: 'spot', desc: '', transport: '', cost: '' };
-                    showModal.value = true;
-                };
-
-                const openEditTheme = (dayIdx) => {
-                    isEditingTheme.value = true; editDayIndex.value = dayIdx;
-                    editForm.value.name = tripData.value[dayIdx].theme;
-                    showModal.value = true;
-                };
-
+                // Edit Logic
+                const openEditSpot = (d, i) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=i; editForm.value={...tripData.value[d].spots[i], tags:''}; showModal.value=true; };
+                const addNewSpot = (d) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=null; editForm.value={time:'12:00', name:'', type:'spot', desc:'', transport:'', cost:''}; showModal.value=true; };
+                const openEditTheme = (d) => { isEditingTheme.value=true; editDayIndex.value=d; editForm.value.name=tripData.value[d].theme; showModal.value=true; };
                 const saveEdit = () => {
-                    if (isEditingTheme.value) {
-                        tripData.value[editDayIndex.value].theme = editForm.value.name;
-                    } else {
-                        const newSpot = { ...editForm.value, tags: [] };
-                        if (editIndex.value !== null) tripData.value[editDayIndex.value].spots[editIndex.value] = newSpot;
-                        else tripData.value[editDayIndex.value].spots.push(newSpot);
-                        tripData.value[editDayIndex.value].spots.sort((a, b) => a.time.localeCompare(b.time));
+                    if(isEditingTheme.value) tripData.value[editDayIndex.value].theme=editForm.value.name;
+                    else {
+                        const spot = {...editForm.value, tags:[]};
+                        if(editIndex.value!==null) tripData.value[editDayIndex.value].spots[editIndex.value]=spot;
+                        else tripData.value[editDayIndex.value].spots.push(spot);
+                        tripData.value[editDayIndex.value].spots.sort((a,b)=>a.time.localeCompare(b.time));
                     }
-                    saveData(); closeModal();
+                    saveData(); showModal.value=false;
                 };
+                const deleteSpot = () => { if(confirm('刪除？')) { tripData.value[editDayIndex.value].spots.splice(editIndex.value, 1); saveData(); showModal.value=false; } };
+                const closeModal = () => showModal.value=false;
 
-                const deleteSpot = () => {
-                    if(confirm('確定刪除？')) { tripData.value[editDayIndex.value].spots.splice(editIndex.value, 1); saveData(); closeModal(); }
-                };
+                // Budget Logic
+                const addExpense = () => { if(!budgetForm.value.item || !budgetForm.value.amount) return; budgetItems.value.push({id:Date.now(), ...budgetForm.value, createdAt:new Date().toISOString()}); saveData(); budgetForm.value.item=''; budgetForm.value.amount=null; };
+                const deleteExpense = (id) => { if(confirm('刪除？')) { budgetItems.value=budgetItems.value.filter(i=>i.id!==id); saveData(); } };
 
-                const closeModal = () => showModal.value = false;
-                const openMap = (dest) => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=transit`, '_blank');
-                const formatNumber = (num) => num ? num.toLocaleString() : '0';
-                const formatDate = (dateStr) => { if(!dateStr) return ''; const d = new Date(dateStr); return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`; };
-                const addExpense = () => { if(!budgetForm.value.item || !budgetForm.value.amount) return; budgetItems.value.push({ id: Date.now(), ...budgetForm.value, createdAt: new Date().toISOString() }); saveData(); budgetForm.value.item=''; budgetForm.value.amount=null; };
-                const deleteExpense = (id) => { if(confirm("刪除此筆？")) { budgetItems.value = budgetItems.value.filter(i => i.id !== id); saveData(); } };
-
+                // Utils
+                const openMap = (d) => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(d)}`, '_blank');
+                const formatNumber = (n) => n ? n.toLocaleString() : '0';
+                const formatDate = (d) => { if(!d) return ''; const date = new Date(d); return `${date.getMonth()+1}/${date.getDate()}`; };
+                const getDotColor = (t) => ({'transport':'bg-gray-400','food':'bg-[#8f5a5a]','shopping':'bg-orange-400','hotel':'bg-indigo-400'}[t] || 'bg-[#788a6d]');
+                const getCategoryColor = (c) => ({'food':'bg-orange-500','transport':'bg-blue-500','shopping':'bg-pink-500','stay':'bg-indigo-500'}[c] || 'bg-gray-500');
+                const getCategoryIcon = (c) => `fa-solid ` + ({'food':'fa-utensils','transport':'fa-train','shopping':'fa-bag-shopping','stay':'fa-bed'}[c] || 'fa-tag');
+                
+                // Computed
                 const getPageTitle = computed(() => ({'itinerary':'行程一覽','info':'資訊','budget':'記帳'}[currentTab.value]));
                 const currentDayDate = computed(() => tripData.value[currentDayIndex.value]?.date || '');
-                const totalSpent = computed(() => budgetItems.value.reduce((sum, i) => sum + (i.amount || 0), 0));
-                const sortedBudgetItems = computed(() => [...budgetItems.value].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-                const getDotColor = (t) => ({'transport':'bg-gray-400','food':'bg-adzuki','shopping':'bg-orange-400','hotel':'bg-indigo-400'}[t] || 'bg-matcha');
-                const getCategoryColor = (c) => ({'food':'bg-orange-100 text-orange-600','transport':'bg-blue-100 text-blue-600','shopping':'bg-pink-100 text-pink-600','stay':'bg-indigo-100 text-indigo-600'}[c] || 'bg-gray-100 text-gray-600');
-                const getCategoryIcon = (c) => `fa-solid ` + ({'food':'fa-utensils','transport':'fa-train','shopping':'fa-bag-shopping','stay':'fa-bed'}[c] || 'fa-tag');
+                const totalSpent = computed(() => budgetItems.value.reduce((s,i)=>s+(i.amount||0),0));
+                const sortedBudgetItems = computed(() => [...budgetItems.value].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)));
 
                 onMounted(loadData);
 

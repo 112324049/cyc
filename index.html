@@ -3,45 +3,233 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 大阪和歌山遊 (診斷模式)</title>
+    <title>2026 大阪和歌山遊</title>
     
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⛩️</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⛩️</text></svg>">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        body { background-color: #fdfcf8; padding: 20px; font-family: monospace; }
-        #log-area { 
-            background: #000; color: #0f0; 
-            padding: 15px; border-radius: 10px; 
-            min-height: 300px; white-space: pre-wrap; word-break: break-all;
-            font-size: 14px; margin-top: 20px;
-        }
-        .error { color: #ff5555; font-weight: bold; }
-        .success { color: #55ff55; font-weight: bold; }
-        button { background: #333; color: white; padding: 10px 20px; border-radius: 5px; margin-bottom: 10px; }
+        body { -webkit-tap-highlight-color: transparent; background-color: #fdfcf8; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        #loading { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #eee; border-top-color: #788a6d; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        [v-cloak] { display: none; }
     </style>
 </head>
-<body>
+<body class="text-gray-800 font-sans h-screen overflow-hidden flex flex-col">
 
-    <h1 class="text-xl font-bold mb-4">🏥 系統診斷模式</h1>
-    <p>如果雲端記帳跑不動，請截圖下方的黑色框框給我看：</p>
-    
-    <div id="log-area">正在初始化系統...<br></div>
+    <div id="loading">
+        <div class="spinner"></div>
+        <p class="mt-4 text-gray-500 text-sm">正在同步雲端帳本...</p>
+    </div>
+
+    <div id="app" v-cloak class="flex-1 flex flex-col h-full relative">
+
+        <header class="pt-6 pb-4 px-6 flex justify-between items-end bg-[#Fdfcf8] border-b border-gray-100 z-10">
+            <div>
+                <h2 class="text-xs font-bold tracking-widest text-[#788a6d] uppercase mb-1">JAPAN TRIP 2026</h2>
+                <h1 class="text-2xl font-bold">{{ getPageTitle }}</h1>
+            </div>
+            <div v-if="currentTab === 'itinerary'" class="text-right">
+                <span class="block text-2xl font-bold">{{ currentDayDate }}</span>
+                <span class="text-xs text-gray-400">Day {{ currentDayIndex + 1 }}</span>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto no-scrollbar pb-24 px-4 bg-[#Fdfcf8]">
+            
+            <div v-if="currentTab === 'itinerary'" class="space-y-6 pt-4">
+                <div class="flex space-x-3 overflow-x-auto pb-2 no-scrollbar">
+                    <button v-for="(day, index) in tripData" :key="index" @click="currentDayIndex = index"
+                        class="flex-shrink-0 w-14 h-16 rounded-xl flex flex-col items-center justify-center border transition-all"
+                        :class="currentDayIndex === index ? 'bg-[#788a6d] text-white shadow-lg scale-105' : 'bg-white text-gray-400 border-gray-200'">
+                        <span class="text-xs font-bold">Day</span>
+                        <span class="text-lg font-bold">{{ index + 1 }}</span>
+                    </button>
+                </div>
+
+                <div @click="openEditTheme(currentDayIndex)" class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition-transform">
+                    <div>
+                        <span class="text-xs text-[#8f5a5a] font-bold uppercase tracking-wider">Today's Theme <i class="fa-solid fa-pen ml-1 opacity-50"></i></span>
+                        <h3 class="text-lg font-bold mt-1">{{ tripData[currentDayIndex].theme }}</h3>
+                    </div>
+                    <i class="fa-solid fa-cloud-sun text-gray-300 text-xl"></i>
+                </div>
+
+                <div class="space-y-4 relative pl-2">
+                    <div class="absolute left-[21px] top-4 bottom-4 w-0.5 bg-gray-200"></div>
+                    <div v-for="(spot, sIndex) in tripData[currentDayIndex].spots" :key="sIndex" class="relative pl-8">
+                        <div class="absolute left-[14px] top-5 w-4 h-4 rounded-full border-2 border-white shadow-sm z-10" :class="getDotColor(spot.type)"></div>
+                        <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm relative">
+                            <button @click="openEditSpot(currentDayIndex, sIndex)" class="absolute top-2 right-2 text-gray-300 hover:text-[#788a6d] p-2"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ spot.time }}</span>
+                            <h4 class="text-lg font-bold mt-1 flex items-center">{{ spot.name }} 
+                                <button @click.stop="openMap(spot.name)" class="ml-2 text-gray-300 text-sm"><i class="fa-solid fa-location-arrow"></i></button>
+                            </h4>
+                            <p v-if="spot.desc" class="text-sm text-gray-600 mt-1 whitespace-pre-line">{{ spot.desc }}</p>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span v-for="tag in spot.tags" :key="tag" class="text-[10px] font-bold px-2 py-1 rounded bg-[#8f5a5a] bg-opacity-10 text-[#8f5a5a]">{{ tag }}</span>
+                                <span v-if="spot.transport" class="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-600"><i class="fa-solid fa-train mr-1"></i>{{ spot.transport }}</span>
+                            </div>
+                            <div v-if="spot.cost" class="mt-2 pt-2 border-t border-dashed border-gray-200 text-xs text-gray-500 flex justify-between">
+                                <span>費用</span><span class="font-mono font-bold">{{ spot.cost }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pl-8 pt-2">
+                        <button @click="addNewSpot(currentDayIndex)" class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 font-bold hover:border-[#788a6d] hover:text-[#788a6d]">
+                            <i class="fa-solid fa-plus"></i> 新增行程
+                        </button>
+                    </div>
+                     <div class="text-center pb-8 pt-4">
+                        <button @click="resetData" class="text-xs text-gray-300 underline">重置回預設行程</button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="currentTab === 'info'" class="space-y-6 pt-4">
+                <section>
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Flights</h3>
+                    <div class="bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                        <div v-for="(flight, idx) in flights" :key="idx" class="p-4 border-b border-gray-100 last:border-0">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[#8f5a5a] font-bold text-xs px-2 py-0.5 bg-[#8f5a5a]/10 rounded">{{ flight.type }}</span>
+                                <span class="font-mono text-sm text-gray-500">{{ flight.code }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <div class="text-center">
+                                    <div class="text-xl font-bold">{{ flight.depTime }}</div>
+                                    <div class="text-xs text-gray-400">{{ flight.dep }}</div>
+                                </div>
+                                <div class="flex-1 px-4 flex flex-col items-center">
+                                    <i class="fa-solid fa-plane text-[#788a6d] text-xs"></i>
+                                    <div class="h-[1px] w-full bg-gray-200 mt-1"></div>
+                                    <span class="text-[10px] text-gray-400 mt-1">{{ flight.duration }}</span>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-xl font-bold">{{ flight.arrTime }}</div>
+                                    <div class="text-xs text-gray-400">{{ flight.arr }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section>
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Hotels</h3>
+                    <div class="space-y-3">
+                        <div v-for="(hotel, idx) in hotels" :key="idx" class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                            <div class="flex items-start">
+                                <div class="bg-[#788a6d]/10 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-[#788a6d] mr-3">
+                                    <i class="fa-solid fa-bed"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold">{{ hotel.name }}</h4>
+                                    <p class="text-xs text-gray-500 mt-1 mb-2">{{ hotel.date }}</p>
+                                    <p class="text-sm text-gray-600 leading-snug">{{ hotel.address }}</p>
+                                    <button @click="openMap(hotel.name)" class="mt-3 text-xs text-[#788a6d] font-bold flex items-center">
+                                        <i class="fa-solid fa-map-pin mr-1"></i> 導航到飯店
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div v-if="currentTab === 'budget'" class="space-y-6 pt-4">
+                <div class="bg-[#333] text-white rounded-xl p-6 shadow-lg text-center relative overflow-hidden">
+                    <p class="text-gray-400 text-xs uppercase tracking-widest">Total Spending</p>
+                    <h2 class="text-3xl font-mono font-bold mt-1">¥{{ formatNumber(totalSpent) }}</h2>
+                    <p class="text-xs text-gray-500 mt-2">約 TWD {{ formatNumber(Math.round(totalSpent * 0.22)) }}</p>
+                </div>
+                <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                    <form @submit.prevent="addExpense" class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <input v-model="budgetForm.item" type="text" placeholder="品項" required class="col-span-2 w-full p-2 bg-gray-50 border rounded text-sm">
+                            <input v-model.number="budgetForm.amount" type="number" placeholder="金額 (日幣)" required class="w-full p-2 bg-gray-50 border rounded text-sm">
+                            <select v-model="budgetForm.category" class="w-full p-2 bg-gray-50 border rounded text-sm">
+                                <option value="food">飲食</option><option value="transport">交通</option><option value="shopping">購物</option><option value="stay">住宿</option><option value="other">其他</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full bg-[#788a6d] text-white py-2 rounded font-bold text-sm shadow active:bg-[#5a6b51]">
+                            <i class="fa-solid fa-plus mr-1"></i> 記上一筆
+                        </button>
+                    </form>
+                </div>
+                <div class="space-y-3">
+                    <div v-for="item in sortedBudgetItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center shadow-sm">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs mr-3 text-white" :class="getCategoryColor(item.category)">
+                                <i :class="getCategoryIcon(item.category)"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-sm">{{ item.item }}</p>
+                                <p class="text-[10px] text-gray-400">{{ formatDate(item.createdAt) }}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-mono font-bold mr-3">¥{{ formatNumber(item.amount) }}</span>
+                            <button @click="deleteExpense(item.id)" class="text-gray-300 hover:text-red-500"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm" @click.self="closeModal">
+            <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+                <h3 class="text-lg font-bold mb-4 text-center">{{ isEditingTheme ? '編輯主題' : '編輯行程' }}</h3>
+                <div class="space-y-3 max-h-[60vh] overflow-y-auto">
+                    <div v-if="!isEditingTheme">
+                        <label class="text-xs font-bold text-gray-500">時間</label>
+                        <input v-model="editForm.time" type="time" class="w-full border rounded p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-500">名稱</label>
+                        <input v-model="editForm.name" type="text" class="w-full border rounded p-2 text-sm font-bold">
+                    </div>
+                    <div v-if="!isEditingTheme">
+                        <label class="text-xs font-bold text-gray-500">類型</label>
+                        <select v-model="editForm.type" class="w-full border rounded p-2 text-sm">
+                            <option value="spot">景點</option><option value="food">飲食</option><option value="transport">交通</option><option value="shopping">購物</option><option value="hotel">住宿</option>
+                        </select>
+                    </div>
+                    <div v-if="!isEditingTheme">
+                        <label class="text-xs font-bold text-gray-500">備註</label>
+                        <textarea v-model="editForm.desc" rows="3" class="w-full border rounded p-2 text-sm"></textarea>
+                    </div>
+                    <div v-if="!isEditingTheme">
+                        <label class="text-xs font-bold text-gray-500">費用</label>
+                        <input v-model="editForm.cost" type="text" class="w-full border rounded p-2 text-sm">
+                    </div>
+                    <div v-if="!isEditingTheme && editIndex !== null" class="pt-2">
+                        <button @click="deleteSpot" class="text-red-500 text-xs w-full py-2">刪除此行程</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mt-4">
+                    <button @click="closeModal" class="py-2 rounded bg-gray-100 text-gray-500 font-bold">取消</button>
+                    <button @click="saveEdit" class="py-2 rounded bg-[#788a6d] text-white font-bold">儲存</button>
+                </div>
+            </div>
+        </div>
+
+        <nav class="fixed bottom-6 left-4 right-4 bg-white/95 border border-white/20 shadow-xl rounded-2xl h-16 flex items-center justify-around z-40">
+            <button @click="currentTab = 'itinerary'" class="flex flex-col items-center w-16" :class="currentTab === 'itinerary' ? 'text-[#788a6d]' : 'text-gray-400'"><i class="fa-solid fa-route text-lg"></i><span class="text-[10px]">行程</span></button>
+            <button @click="currentTab = 'info'" class="flex flex-col items-center w-16" :class="currentTab === 'info' ? 'text-[#788a6d]' : 'text-gray-400'"><i class="fa-solid fa-suitcase text-lg"></i><span class="text-[10px]">資訊</span></button>
+            <button @click="currentTab = 'budget'" class="flex flex-col items-center w-16" :class="currentTab === 'budget' ? 'text-[#788a6d]' : 'text-gray-400'"><i class="fa-solid fa-yen-sign text-lg"></i><span class="text-[10px]">記帳</span></button>
+        </nav>
+    </div>
 
     <script type="module">
+        import { createApp, ref, computed, onMounted } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        const logArea = document.getElementById('log-area');
-        function log(msg, type = 'info') {
-            const span = document.createElement('span');
-            span.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>`;
-            if (type === 'error') span.className = 'error';
-            if (type === 'success') span.className = 'success';
-            logArea.appendChild(span);
-        }
-
-        // 1. 檢查 Firebase 設定
+        // Firebase 設定
         const firebaseConfig = {
             apiKey: "AIzaSyC_89NqMZPOuhOAkIgGYZou-ArNGG7tr0I",
             authDomain: "japan-trip-23e67.firebaseapp.com",
@@ -52,49 +240,132 @@
             measurementId: "G-ZKSY80ZS3T"
         };
 
-        try {
-            log("1. 正在啟動 Firebase...", "info");
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            log("✅ Firebase 啟動成功！", "success");
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-            log("2. 正在嘗試連線資料庫 (Firestore)...", "info");
-            
-            // 嘗試讀取
-            try {
-                const querySnapshot = await getDocs(collection(db, "expenses"));
-                log(`✅ 連線成功！目前有 ${querySnapshot.size} 筆資料。`, "success");
+        createApp({
+            setup() {
+                // 行程資料 (手機端儲存)
+                const DB_TRIP = 'japan_trip_local_final_v1'; 
                 
-                if (querySnapshot.size === 0) {
-                    log("⚠️ 資料庫是空的，嘗試寫入測試資料...", "info");
-                    await addDoc(collection(db, "expenses"), {
-                        test: true,
-                        createdAt: new Date()
+                const defaultTripData = [
+                    { day: 1, date: "2/28", theme: "和歌山．加太線", spots: [{ time: "06:00", name: "關西機場", type: "transport", desc: "入境", tags: ["入境"], transport: "南海線" }, { time: "11:00", name: "淡嶋神社", type: "spot", desc: "加太線終點", tags: ["加太線"] }, { time: "13:00", name: "井出商店拉麵", type: "food", desc: "午餐", tags: ["必吃"], cost: "¥1000" }, { time: "16:00", name: "Dormy Inn", type: "hotel", desc: "Check-in", tags: ["住宿"] }] },
+                    { day: 2, date: "3/1", theme: "南紀白濱溫泉", spots: [{ time: "09:00", name: "白濱站", type: "transport", desc: "前往白濱", tags: ["移動"], cost: "¥3740" }, { time: "11:00", name: "ToreTore 市場", type: "food", desc: "海鮮燒烤", tags: ["必吃"] }, { time: "16:00", name: "白浜御苑", type: "hotel", desc: "溫泉飯店", tags: ["溫泉"] }] },
+                    { day: 3, date: "3/2", theme: "回大阪．難波", spots: [{ time: "09:00", name: "圓月島", type: "spot", desc: "拍照", tags: ["拍照"] }, { time: "11:00", name: "回大阪", type: "transport", desc: "移動", cost: "¥5380" }, { time: "15:00", name: "道頓堀", type: "shopping", desc: "逛街", tags: ["購物"] }] },
+                    { day: 4, date: "3/3", theme: "環球影城", spots: [{ time: "07:30", name: "USJ", type: "spot", desc: "全日遊玩", tags: ["必去"], cost: "¥760" }, { time: "19:00", name: "CityWalk", type: "food", desc: "晚餐", tags: ["晚餐"] }] },
+                    { day: 5, date: "3/4", theme: "海遊館", spots: [{ time: "10:00", name: "海遊館", type: "spot", desc: "水族館", tags: ["親子"], cost: "¥580" }, { time: "16:00", name: "梅田", type: "shopping", desc: "購物", tags: ["購物"] }] },
+                    { day: 6, date: "3/5", theme: "返程", spots: [{ time: "09:00", name: "難波八阪神社", type: "spot", desc: "獅子頭", tags: ["拍照"] }, { time: "20:00", name: "機場", type: "transport", desc: "登機", tags: ["離境"], cost: "¥970" }] }
+                ];
+
+                const flights = ref([
+                    { type: "去程", code: "GK50", dep: "TPE 台北", arr: "KIX 大阪", depTime: "02:30", arrTime: "06:00", duration: "2h 30m" },
+                    { type: "回程", code: "GK51", dep: "KIX 大阪", arr: "TPE 台北", depTime: "23:10", arrTime: "01:30+1", duration: "3h 20m" }
+                ]);
+                const hotels = ref([
+                    { date: "2/28", name: "Dormy Inn Premium Wakayama", address: "和歌山市美園町3-36" },
+                    { date: "3/1", name: "白浜御苑 (大江戸温泉物語)", address: "和歌山県西牟婁郡白浜町1011" },
+                    { date: "3/2-3/5", name: "APA Hotel Namba", address: "大阪市浪速区湊町1-2-13" }
+                ]);
+
+                // 狀態
+                const currentTab = ref('itinerary');
+                const currentDayIndex = ref(0);
+                const tripData = ref([]);
+                const budgetItems = ref([]);
+                const budgetForm = ref({ item: '', amount: null, category: 'food' });
+                const showModal = ref(false);
+                const isEditingTheme = ref(false);
+                const editDayIndex = ref(null);
+                const editIndex = ref(null);
+                const editForm = ref({ time: '', name: '', type: 'spot', desc: '', transport: '', cost: '' });
+
+                // 初始化
+                onMounted(() => {
+                    // 1. 載入行程
+                    const savedTrip = localStorage.getItem(DB_TRIP);
+                    tripData.value = savedTrip ? JSON.parse(savedTrip) : JSON.parse(JSON.stringify(defaultTripData));
+
+                    // 2. 載入雲端記帳 (監聽)
+                    const q = query(collection(db, "expenses"), orderBy("createdAt", "desc"));
+                    onSnapshot(q, (snapshot) => {
+                        budgetItems.value = snapshot.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data()
+                        }));
+                        // 移除 Loading
+                        const loadingEl = document.getElementById('loading');
+                        if (loadingEl) loadingEl.remove();
+                    }, (error) => {
+                        console.error("Firebase Error:", error);
+                        // 發生錯誤也要移除 loading，讓行程能看
+                        const loadingEl = document.getElementById('loading');
+                        if (loadingEl) loadingEl.remove();
                     });
-                    log("✅ 寫入測試資料成功！您的資料庫完全正常！", "success");
-                    log("🎉 請告訴我「測試成功」，我給您換回正式版！", "success");
-                } else {
-                    log("🎉 連線完全正常！請告訴我「測試成功」，我給您換回正式版！", "success");
-                }
+                });
 
-            } catch (dbError) {
-                console.error(dbError);
-                log("❌ 資料庫連線失敗！", "error");
-                log("錯誤代碼: " + dbError.code, "error");
-                log("錯誤訊息: " + dbError.message, "error");
+                // 行程儲存
+                const saveTripData = () => { localStorage.setItem(DB_TRIP, JSON.stringify(tripData.value)); };
+                const resetData = () => { if(confirm('確定重置行程？所有修改會消失。')) { tripData.value = JSON.parse(JSON.stringify(defaultTripData)); saveTripData(); } };
+
+                // 行程編輯
+                const openEditSpot = (d, i) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=i; editForm.value={...tripData.value[d].spots[i], tags:''}; showModal.value=true; };
+                const addNewSpot = (d) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=null; editForm.value={time:'12:00', name:'', type:'spot', desc:'', transport:'', cost:''}; showModal.value=true; };
+                const openEditTheme = (d) => { isEditingTheme.value=true; editDayIndex.value=d; editForm.value.name=tripData.value[d].theme; showModal.value=true; };
+                const saveEdit = () => {
+                    if(isEditingTheme.value) tripData.value[editDayIndex.value].theme=editForm.value.name;
+                    else {
+                        const spot = {...editForm.value, tags:[]};
+                        if(editIndex.value!==null) tripData.value[editDayIndex.value].spots[editIndex.value]=spot;
+                        else tripData.value[editDayIndex.value].spots.push(spot);
+                        tripData.value[editDayIndex.value].spots.sort((a,b)=>a.time.localeCompare(b.time));
+                    }
+                    saveTripData(); showModal.value=false;
+                };
+                const deleteSpot = () => { if(confirm('刪除？')) { tripData.value[editDayIndex.value].spots.splice(editIndex.value, 1); saveTripData(); showModal.value=false; } };
+                const closeModal = () => showModal.value=false;
+
+                // ★★★ 雲端記帳邏輯 ★★★
+                const addExpense = async () => {
+                    if(!budgetForm.value.item || !budgetForm.value.amount) return;
+                    try {
+                        await addDoc(collection(db, "expenses"), {
+                            item: budgetForm.value.item,
+                            amount: budgetForm.value.amount,
+                            category: budgetForm.value.category,
+                            createdAt: serverTimestamp()
+                        });
+                        budgetForm.value.item=''; budgetForm.value.amount=null;
+                    } catch (e) {
+                        alert("新增失敗: " + e.message);
+                    }
+                };
+
+                const deleteExpense = async (id) => {
+                    if(confirm('刪除此筆？')) {
+                        try { await deleteDoc(doc(db, "expenses", id)); } catch (e) { alert("刪除失敗: " + e.message); }
+                    }
+                };
+
+                // Utils
+                const openMap = (d) => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(d)}`, '_blank');
+                const formatNumber = (n) => n ? n.toLocaleString() : '0';
+                const formatDate = (t) => { if(!t) return ''; const d = t.toDate ? t.toDate() : new Date(t); return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`; };
+                const getDotColor = (t) => ({'transport':'bg-gray-400','food':'bg-[#8f5a5a]','shopping':'bg-orange-400','hotel':'bg-indigo-400'}[t] || 'bg-[#788a6d]');
+                const getCategoryColor = (c) => ({'food':'bg-orange-500','transport':'bg-blue-500','shopping':'bg-pink-500','stay':'bg-indigo-500'}[c] || 'bg-gray-500');
+                const getCategoryIcon = (c) => `fa-solid ` + ({'food':'fa-utensils','transport':'fa-train','shopping':'fa-bag-shopping','stay':'fa-bed'}[c] || 'fa-tag');
                 
-                if (dbError.code === 'permission-denied') {
-                    log("\n💡 原因：【權限不足】\n請去 Firebase Console -> Firestore Database -> Rules\n把 allow read, write 改成 if true;", "error");
-                } else if (dbError.code === 'unavailable' || dbError.message.includes('offline')) {
-                    log("\n💡 原因：【網路不通】\n可能是學校/公司防火牆擋住了 Firebase，或是您的手機沒網路。", "error");
-                } else {
-                    log("\n💡 原因：可能是資料庫還沒建立 (Create Database)。請確認您有點擊 'Start in test mode'。", "error");
-                }
-            }
+                const getPageTitle = computed(() => ({'itinerary':'行程一覽','info':'資訊','budget':'記帳'}[currentTab.value]));
+                const currentDayDate = computed(() => tripData.value[currentDayIndex.value]?.date || '');
+                const totalSpent = computed(() => budgetItems.value.reduce((s,i)=>s+(i.amount||0),0));
+                const sortedBudgetItems = computed(() => budgetItems.value);
 
-        } catch (e) {
-            log("❌ 程式發生嚴重錯誤：" + e.message, "error");
-        }
+                return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, showModal, editForm, isEditingTheme, editIndex,
+                    getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, openMap, formatNumber, formatDate, addExpense, deleteExpense,
+                    getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData
+                };
+            }
+        }).mount('#app');
     </script>
 </body>
 </html>

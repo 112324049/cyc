@@ -2,40 +2,181 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>測試修復</title>
-    <style>
-        body { font-family: sans-serif; padding: 20px; text-align: center; }
-        .box { background: #e0f2fe; padding: 20px; border-radius: 10px; margin-top: 20px; }
-        button { padding: 10px 20px; background: #0ea5e9; color: white; border: none; border-radius: 5px; font-size: 16px; }
-    </style>
-</head>
-<body>
-    <h1>🔧 維修測試模式</h1>
-    <p>如果您看得到這個畫面，代表 App 其實是正常的！</p>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2026 大阪和歌山遊 (可編輯版)</title>
+    <meta name="theme-color" content="#Fdfcf8">
     
-    <div class="box">
-        <p>測試記憶功能：</p>
-        <h3 id="display">...</h3>
-        <button onclick="testSave()">點我儲存測試</button>
-    </div>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet">
 
     <script>
-        // 讀取
-        let saved = localStorage.getItem('test_data');
-        if (saved) {
-            document.getElementById('display').innerText = "✅ 讀取成功：已儲存 (" + saved + ")";
-        } else {
-            document.getElementById('display').innerText = "❌ 尚未儲存資料";
-        }
-
-        // 儲存
-        function testSave() {
-            let time = new Date().toLocaleTimeString();
-            localStorage.setItem('test_data', time);
-            document.getElementById('display').innerText = "✅ 剛剛已儲存：" + time;
-            alert("儲存成功！請重新整理網頁，看看這行字還在不在。");
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'washi': '#Fdfcf8',
+                        'charcoal': '#333333',
+                        'matcha': '#788a6d',
+                        'adzuki': '#8f5a5a',
+                        'border-light': '#e5e5e5'
+                    },
+                    fontFamily: {
+                        'serif': ['"Noto Serif JP"', 'serif'],
+                        'sans': ['"Noto Sans TC"', 'sans-serif'],
+                    }
+                }
+            }
         }
     </script>
-</body>
-</html>
+    <style>
+        [v-cloak] { display: none; }
+        body { -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Modal Animation */
+        .modal-enter-active, .modal-leave-active { transition: opacity 0.3s ease; }
+        .modal-enter-from, .modal-leave-to { opacity: 0; }
+        .animate-fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-washi text-charcoal font-sans antialiased h-screen overflow-hidden flex flex-col">
+
+    <div id="app" v-cloak class="flex-1 flex flex-col h-full overflow-hidden relative">
+
+        <header class="pt-6 pb-4 px-6 flex justify-between items-end bg-washi z-10 border-b border-gray-100">
+            <div>
+                <h2 class="text-xs font-bold tracking-widest text-matcha uppercase mb-1">JAPAN TRIP 2026</h2>
+                <h1 class="text-2xl font-serif font-bold text-charcoal">{{ getPageTitle }}</h1>
+            </div>
+            <div v-if="currentTab === 'itinerary'" class="text-right">
+                <span class="block text-2xl font-serif">{{ currentDayDate }}</span>
+                <span class="text-xs text-gray-500">Day {{ currentDayIndex + 1 }}</span>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto no-scrollbar pb-24 px-4 scroll-smooth">
+            
+            <div v-if="currentTab === 'itinerary'" class="space-y-6 pt-2">
+                <div class="flex space-x-3 overflow-x-auto pb-2 no-scrollbar">
+                    <button 
+                        v-for="(day, index) in tripData" 
+                        :key="index"
+                        @click="currentDayIndex = index"
+                        class="flex-shrink-0 w-14 h-16 rounded-xl flex flex-col items-center justify-center transition-all duration-300 border"
+                        :class="currentDayIndex === index ? 'bg-matcha text-white border-matcha shadow-lg transform scale-105' : 'bg-white text-gray-400 border-border-light'"
+                    >
+                        <span class="text-xs font-bold">Day</span>
+                        <span class="text-lg font-serif font-bold">{{ index + 1 }}</span>
+                    </button>
+                </div>
+
+                <div @click="openEditTheme(currentDayIndex)" class="bg-white rounded-xl p-4 border border-border-light shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] flex items-center justify-between cursor-pointer active:scale-95 transition-transform">
+                    <div>
+                        <span class="text-xs text-adzuki font-bold uppercase tracking-wider flex items-center">
+                            Today's Theme <i class="fa-solid fa-pen ml-2 text-[10px] opacity-50"></i>
+                        </span>
+                        <h3 class="text-lg font-bold mt-1">{{ tripData[currentDayIndex].theme }}</h3>
+                    </div>
+                    <div class="text-center">
+                        <i class="fa-solid fa-cloud-sun text-gray-400 text-xl"></i>
+                    </div>
+                </div>
+
+                <div class="space-y-4 relative pl-2">
+                    <div class="absolute left-[21px] top-4 bottom-4 w-0.5 bg-gray-200"></div>
+
+                    <div v-for="(spot, sIndex) in tripData[currentDayIndex].spots" :key="sIndex" class="relative pl-8 group">
+                        <div class="absolute left-[14px] top-5 w-4 h-4 rounded-full border-2 border-white shadow-sm z-10"
+                             :class="getDotColor(spot.type)"></div>
+
+                        <div class="bg-white rounded-xl p-4 border border-border-light shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] relative">
+                            <button @click="openEditSpot(currentDayIndex, sIndex)" class="absolute top-2 right-2 text-gray-300 hover:text-matcha p-2">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+
+                            <div class="flex justify-between items-start mb-2 pr-6">
+                                <span class="text-xs font-bold text-gray-500 font-mono bg-gray-100 px-2 py-0.5 rounded">{{ spot.time }}</span>
+                            </div>
+                            
+                            <h4 class="text-lg font-bold text-charcoal mb-1 flex items-center">
+                                {{ spot.name }}
+                                <button @click.stop="openMap(spot.name)" class="ml-2 text-gray-300 hover:text-matcha text-sm">
+                                    <i class="fa-solid fa-location-arrow"></i>
+                                </button>
+                            </h4>
+                            
+                            <p v-if="spot.desc" class="text-sm text-gray-600 mb-2 leading-relaxed whitespace-pre-line">
+                                {{ spot.desc }}
+                            </p>
+
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span v-for="tag in spot.tags" :key="tag" 
+                                      class="text-[10px] font-bold px-2 py-1 rounded bg-opacity-10 text-adzuki bg-adzuki">
+                                    {{ tag }}
+                                </span>
+                                <span v-if="spot.transport" class="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-600">
+                                    <i class="fa-solid fa-train mr-1"></i>{{ spot.transport }}
+                                </span>
+                            </div>
+                            
+                            <div v-if="spot.cost" class="mt-3 pt-2 border-t border-dashed border-gray-200 text-xs text-gray-500 flex justify-between items-center">
+                                <span>預估費用</span>
+                                <span class="font-mono font-bold">{{ spot.cost }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative pl-8 pt-2 pb-8">
+                        <button @click="addNewSpot(currentDayIndex)" class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 font-bold text-sm hover:border-matcha hover:text-matcha transition-colors">
+                            <i class="fa-solid fa-plus mr-1"></i> 新增行程
+                        </button>
+                    </div>
+
+                    <div class="text-center pb-8">
+                        <button @click="resetData" class="text-xs text-gray-300 underline">重置回預設行程 (清空修改)</button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="currentTab === 'info'" class="space-y-6 pt-2">
+                <section>
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Flights</h3>
+                    <div class="bg-white rounded-xl overflow-hidden border border-border-light shadow-sm">
+                        <div v-for="(flight, idx) in flights" :key="idx" class="p-4 border-b border-border-light last:border-0">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-adzuki font-bold text-xs px-2 py-0.5 bg-adzuki/10 rounded">{{ flight.type }}</span>
+                                <span class="font-mono text-sm text-gray-500">{{ flight.code }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <div class="text-center">
+                                    <div class="text-xl font-bold">{{ flight.depTime }}</div>
+                                    <div class="text-xs text-gray-400">{{ flight.dep }}</div>
+                                </div>
+                                <div class="flex-1 px-4 flex flex-col items-center">
+                                    <i class="fa-solid fa-plane text-matcha text-xs"></i>
+                                    <div class="h-[1px] w-full bg-gray-200 mt-1"></div>
+                                    <span class="text-[10px] text-gray-400 mt-1">{{ flight.duration }}</span>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-xl font-bold">{{ flight.arrTime }}</div>
+                                    <div class="text-xs text-gray-400">{{ flight.arr }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section>
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Hotels</h3>
+                    <div class="space-y-3">
+                        <div v-for="(hotel, idx) in hotels" :key="idx" class="bg-white rounded-xl p-4 border border-border-light shadow-sm">
+                            <div class="flex items-start">
+                                <div class="bg-matcha/10 w-10 h-10 rounded-full flex items-center justify-center flex-shrink

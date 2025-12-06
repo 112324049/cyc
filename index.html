@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 大阪和歌山遊 (雲端記帳版)</title>
+    <title>2026 大阪和歌山遊 (多人共用版)</title>
     
-    <link rel="icon" href="icon.png" type="image/png">
-    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⛩️</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⛩️</text></svg>">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -25,6 +25,7 @@
     <div id="loading">
         <div class="spinner"></div>
         <p class="mt-4 text-gray-500 text-sm">正在連線雲端帳本...</p>
+        <p class="mt-2 text-xs text-gray-400" id="loading-hint">(如果卡住太久，請確認 Firebase 規則已設為 if true)</p>
     </div>
 
     <div id="app" v-cloak class="flex-1 flex flex-col h-full relative">
@@ -229,7 +230,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // 您的 Firebase 設定
+        // Firebase 設定
         const firebaseConfig = {
             apiKey: "AIzaSyC_89NqMZPOuhOAkIgGYZou-ArNGG7tr0I",
             authDomain: "japan-trip-23e67.firebaseapp.com",
@@ -247,7 +248,7 @@
         createApp({
             setup() {
                 // 行程資料 (手機端儲存 - LocalStorage)
-                const DB_TRIP = 'japan_trip_local_v5'; 
+                const DB_TRIP = 'japan_trip_local_v6'; 
                 
                 const defaultTripData = [
                     { day: 1, date: "2/28", theme: "和歌山．加太線", spots: [{ time: "06:00", name: "關西機場", type: "transport", desc: "入境", tags: ["入境"], transport: "南海線" }, { time: "11:00", name: "淡嶋神社", type: "spot", desc: "加太線終點", tags: ["加太線"] }, { time: "13:00", name: "井出商店拉麵", type: "food", desc: "午餐", tags: ["必吃"], cost: "¥1000" }, { time: "16:00", name: "Dormy Inn", type: "hotel", desc: "Check-in", tags: ["住宿"] }] },
@@ -298,7 +299,12 @@
                         if (loadingEl) loadingEl.remove();
                     }, (error) => {
                         console.error("Firebase Error:", error);
-                        alert("連線資料庫失敗，請檢查網路");
+                        // 即使 Firebase 失敗，也移除 loading 讓用戶能看行程，並顯示錯誤
+                        const loadingEl = document.getElementById('loading');
+                        const hintEl = document.getElementById('loading-hint');
+                        if (hintEl) hintEl.innerText = "連線失敗 (請檢查Firebase規則): " + error.code;
+                        // 不移除 loading 讓用戶知道有錯，或者可以選擇 3秒後移除
+                        setTimeout(() => { if (loadingEl) loadingEl.remove(); }, 3000);
                     });
                 });
 
@@ -337,7 +343,7 @@
                         });
                         budgetForm.value.item=''; budgetForm.value.amount=null;
                     } catch (e) {
-                        alert("新增失敗: " + e.message);
+                        alert("新增失敗: " + e.message + "\n(請檢查 Firebase 規則是否允許寫入)");
                     }
                 };
 

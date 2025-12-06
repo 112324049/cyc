@@ -156,7 +156,7 @@
                 <div class="bg-[#333] text-white rounded-xl p-6 shadow-lg text-center relative overflow-hidden">
                     <p class="text-gray-400 text-xs uppercase tracking-widest">Total Spending</p>
                     <h2 class="text-3xl font-mono font-bold mt-1">¥{{ formatNumber(totalSpent) }}</h2>
-                    <p class="text-xs text-gray-500 mt-2">約 TWD {{ formatNumber(Math.round(totalSpent * 0.22)) }}</p>
+                    <p class="text-xs text-gray-500 mt-2">約 TWD {{ formatNumber(Math.round(totalSpent * 0.20)) }}</p>
                 </div>
                 <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
                     <form @submit.prevent="addExpense" class="space-y-3">

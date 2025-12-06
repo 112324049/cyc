@@ -15,8 +15,8 @@
         body { -webkit-tap-highlight-color: transparent; background-color: #fdfcf8; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         [v-cloak] { display: none; }
-        /* 錯誤訊息框 */
-        #crash-screen { display: none; padding: 20px; color: red; font-family: monospace; background: #fff0f0; height: 100vh; }
+        /* 錯誤訊息框 (隱藏) */
+        #crash-screen { display: none; padding: 20px; color: red; font-family: monospace; background: #fff0f0; height: 100vh; z-index: 99999; position: fixed; inset: 0; }
     </style>
 </head>
 <body class="text-gray-800 font-sans h-screen overflow-hidden flex flex-col">
@@ -24,15 +24,13 @@
     <div id="crash-screen">
         <h2 class="text-xl font-bold mb-2">😭 發生錯誤</h2>
         <p id="error-text">正在載入系統...</p>
+        <button onclick="localStorage.clear(); location.reload()" class="mt-4 px-4 py-2 bg-red-500 text-white rounded">重置並修復</button>
     </div>
 
     <script>
-        // 捕捉全域錯誤並顯示在螢幕上
         window.onerror = function(message, source, lineno, colno, error) {
             document.getElementById('crash-screen').style.display = 'block';
-            document.getElementById('error-text').innerText = "錯誤: " + message + "\n行數: " + lineno;
-            // 隱藏 App 避免重疊
-            if(document.getElementById('app')) document.getElementById('app').style.display = 'none';
+            document.getElementById('error-text').innerText = "錯誤: " + message + "\n行數: " + lineno + "\n(請點擊下方按鈕重置)";
         };
     </script>
 
@@ -58,6 +56,7 @@
         <main class="flex-1 overflow-y-auto no-scrollbar pb-24 px-4 bg-[#Fdfcf8]">
             
             <div v-if="currentTab === 'itinerary'" class="space-y-6 pt-4">
+                
                 <div class="flex space-x-3 overflow-x-auto pb-2 no-scrollbar">
                     <button v-for="(day, index) in tripData" :key="index" @click="currentDayIndex = index"
                         class="flex-shrink-0 w-14 h-16 rounded-xl flex flex-col items-center justify-center border transition-all"
@@ -67,7 +66,7 @@
                     </button>
                 </div>
 
-                <div @click="openEditTheme(currentDayIndex)" class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition-transform">
+                <div v-if="tripData[currentDayIndex]" @click="openEditTheme(currentDayIndex)" class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition-transform">
                     <div>
                         <span class="text-xs text-[#8f5a5a] font-bold uppercase tracking-wider">Today's Theme <i class="fa-solid fa-pen ml-1 opacity-50"></i></span>
                         <h3 class="text-lg font-bold mt-1">{{ tripData[currentDayIndex].theme }}</h3>
@@ -75,7 +74,7 @@
                     <i class="fa-solid fa-cloud-sun text-gray-300 text-xl"></i>
                 </div>
 
-                <div class="space-y-4 relative pl-2">
+                <div v-if="tripData[currentDayIndex]" class="space-y-4 relative pl-2">
                     <div class="absolute left-[21px] top-4 bottom-4 w-0.5 bg-gray-200"></div>
                     <div v-for="(spot, sIndex) in tripData[currentDayIndex].spots" :key="sIndex" class="relative pl-8">
                         <div class="absolute left-[14px] top-5 w-4 h-4 rounded-full border-2 border-white shadow-sm z-10" :class="getDotColor(spot.type)"></div>
@@ -177,7 +176,7 @@
                 </div>
                 <div class="space-y-3">
                     <div v-if="connectionStatus === 'connecting'" class="text-center py-4 text-gray-400 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-1"></i> 載入中...</div>
-                    <div v-if="sortedBudgetItems.length === 0 && connectionStatus === 'connected'" class="text-center py-8 text-gray-400 text-sm">尚未有紀錄</div>
+                    <div v-else-if="sortedBudgetItems.length === 0" class="text-center py-8 text-gray-400 text-sm">尚未有紀錄</div>
                     
                     <div v-for="item in sortedBudgetItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center shadow-sm">
                         <div class="flex items-center">
@@ -263,11 +262,23 @@
 
         createApp({
             setup() {
-                const DB_TRIP = 'japan_trip_local_v8'; 
+                const DB_TRIP = 'japan_trip_local_v9'; 
                 
                 const currentTab = ref('itinerary');
                 const currentDayIndex = ref(0);
-                const tripData = ref([]);
+                // ★★★ 關鍵修改：預設值直接填入，防止 undefined 錯誤 ★★★
+                const defaultTripData = [
+                    { day: 1, date: "2/28", theme: "和歌山．加太線", spots: [{ time: "06:00", name: "關西機場", type: "transport", desc: "入境", tags: ["入境"], transport: "南海線" }, { time: "11:00", name: "淡嶋神社", type: "spot", desc: "加太線終點", tags: ["加太線"] }, { time: "13:00", name: "井出商店拉麵", type: "food", desc: "午餐", tags: ["必吃"], cost: "¥1000" }, { time: "16:00", name: "Dormy Inn", type: "hotel", desc: "Check-in", tags: ["住宿"] }] },
+                    { day: 2, date: "3/1", theme: "南紀白濱溫泉", spots: [{ time: "09:00", name: "白濱站", type: "transport", desc: "前往白濱", tags: ["移動"], cost: "¥3740" }, { time: "11:00", name: "ToreTore 市場", type: "food", desc: "海鮮燒烤", tags: ["必吃"] }, { time: "16:00", name: "白浜御苑", type: "hotel", desc: "溫泉飯店", tags: ["溫泉"] }] },
+                    { day: 3, date: "3/2", theme: "回大阪．難波", spots: [{ time: "09:00", name: "圓月島", type: "spot", desc: "拍照", tags: ["拍照"] }, { time: "11:00", name: "回大阪", type: "transport", desc: "移動", cost: "¥5380" }, { time: "15:00", name: "道頓堀", type: "shopping", desc: "逛街", tags: ["購物"] }] },
+                    { day: 4, date: "3/3", theme: "環球影城", spots: [{ time: "07:30", name: "USJ", type: "spot", desc: "全日遊玩", tags: ["必去"], cost: "¥760" }, { time: "19:00", name: "CityWalk", type: "food", desc: "晚餐", tags: ["晚餐"] }] },
+                    { day: 5, date: "3/4", theme: "海遊館", spots: [{ time: "10:00", name: "海遊館", type: "spot", desc: "水族館", tags: ["親子"], cost: "¥580" }, { time: "16:00", name: "梅田", type: "shopping", desc: "購物", tags: ["購物"] }] },
+                    { day: 6, date: "3/5", theme: "返程", spots: [{ time: "09:00", name: "難波八阪神社", type: "spot", desc: "獅子頭", tags: ["拍照"] }, { time: "20:00", name: "機場", type: "transport", desc: "登機", tags: ["離境"], cost: "¥970" }] }
+                ];
+                
+                // ★★★ 這裡改成直接初始化，不要等 onMounted ★★★
+                const tripData = ref(JSON.parse(JSON.stringify(defaultTripData)));
+
                 const budgetItems = ref([]);
                 const budgetForm = ref({ item: '', amount: null, category: 'food' });
                 const showModal = ref(false);
@@ -277,21 +288,15 @@
                 const editForm = ref({ time: '', name: '', type: 'spot', desc: '', transport: '', cost: '' });
                 const connectionStatus = ref('connecting');
 
-                // Default Data
-                const defaultTripData = [
-                    { day: 1, date: "2/28", theme: "和歌山．加太線", spots: [{ time: "06:00", name: "關西機場", type: "transport", desc: "入境", tags: ["入境"], transport: "南海線" }, { time: "11:00", name: "淡嶋神社", type: "spot", desc: "加太線終點", tags: ["加太線"] }, { time: "13:00", name: "井出商店拉麵", type: "food", desc: "午餐", tags: ["必吃"], cost: "¥1000" }, { time: "16:00", name: "Dormy Inn", type: "hotel", desc: "Check-in", tags: ["住宿"] }] },
-                    { day: 2, date: "3/1", theme: "南紀白濱溫泉", spots: [{ time: "09:00", name: "白濱站", type: "transport", desc: "前往白濱", tags: ["移動"], cost: "¥3740" }, { time: "11:00", name: "ToreTore 市場", type: "food", desc: "海鮮燒烤", tags: ["必吃"] }, { time: "16:00", name: "白浜御苑", type: "hotel", desc: "溫泉飯店", tags: ["溫泉"] }] },
-                    { day: 3, date: "3/2", theme: "回大阪．難波", spots: [{ time: "09:00", name: "圓月島", type: "spot", desc: "拍照", tags: ["拍照"] }, { time: "11:00", name: "回大阪", type: "transport", desc: "移動", cost: "¥5380" }, { time: "15:00", name: "道頓堀", type: "shopping", desc: "逛街", tags: ["購物"] }] },
-                    { day: 4, date: "3/3", theme: "環球影城", spots: [{ time: "07:30", name: "USJ", type: "spot", desc: "全日遊玩", tags: ["必去"], cost: "¥760" }, { time: "19:00", name: "CityWalk", type: "food", desc: "晚餐", tags: ["晚餐"] }] },
-                    { day: 5, date: "3/4", theme: "海遊館", spots: [{ time: "10:00", name: "海遊館", type: "spot", desc: "水族館", tags: ["親子"], cost: "¥580" }, { time: "16:00", name: "梅田", type: "shopping", desc: "購物", tags: ["購物"] }] },
-                    { day: 6, date: "3/5", theme: "返程", spots: [{ time: "09:00", name: "難波八阪神社", type: "spot", desc: "獅子頭", tags: ["拍照"] }, { time: "20:00", name: "機場", type: "transport", desc: "登機", tags: ["離境"], cost: "¥970" }] }
-                ];
                 const flights = ref([{ type: "去程", code: "GK50", dep: "TPE 台北", arr: "KIX 大阪", depTime: "02:30", arrTime: "06:00", duration: "2h 30m" }, { type: "回程", code: "GK51", dep: "KIX 大阪", arr: "TPE 台北", depTime: "23:10", arrTime: "01:30+1", duration: "3h 20m" }]);
                 const hotels = ref([{ date: "2/28", name: "Dormy Inn Premium Wakayama", address: "和歌山市美園町3-36" }, { date: "3/1", name: "白浜御苑", address: "和歌山県西牟婁郡白浜町1011" }, { date: "3/2-3/5", name: "APA Hotel Namba", address: "大阪市浪速区湊町1-2-13" }]);
 
                 onMounted(() => {
+                    // 嘗試讀取本地儲存的行程 (如果有的話才覆蓋)
                     const savedTrip = localStorage.getItem(DB_TRIP);
-                    tripData.value = savedTrip ? JSON.parse(savedTrip) : JSON.parse(JSON.stringify(defaultTripData));
+                    if (savedTrip) {
+                        tripData.value = JSON.parse(savedTrip);
+                    }
 
                     try {
                         const q = query(collection(db, "expenses"), orderBy("createdAt", "desc"));

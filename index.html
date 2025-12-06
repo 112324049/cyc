@@ -15,14 +15,26 @@
         body { -webkit-tap-highlight-color: transparent; background-color: #fdfcf8; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         [v-cloak] { display: none; }
-        /* 連線狀態燈號 */
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .bg-green-500 { background-color: #22c55e; }
-        .bg-yellow-500 { background-color: #eab308; }
-        .bg-red-500 { background-color: #ef4444; }
+        /* 錯誤訊息框 */
+        #crash-screen { display: none; padding: 20px; color: red; font-family: monospace; background: #fff0f0; height: 100vh; }
     </style>
 </head>
 <body class="text-gray-800 font-sans h-screen overflow-hidden flex flex-col">
+
+    <div id="crash-screen">
+        <h2 class="text-xl font-bold mb-2">😭 發生錯誤</h2>
+        <p id="error-text">正在載入系統...</p>
+    </div>
+
+    <script>
+        // 捕捉全域錯誤並顯示在螢幕上
+        window.onerror = function(message, source, lineno, colno, error) {
+            document.getElementById('crash-screen').style.display = 'block';
+            document.getElementById('error-text').innerText = "錯誤: " + message + "\n行數: " + lineno;
+            // 隱藏 App 避免重疊
+            if(document.getElementById('app')) document.getElementById('app').style.display = 'none';
+        };
+    </script>
 
     <div id="app" v-cloak class="flex-1 flex flex-col h-full relative">
 
@@ -37,8 +49,8 @@
             </div>
             <div v-if="currentTab === 'budget'" class="text-right">
                 <div class="flex items-center justify-end text-xs text-gray-400">
-                    <span class="status-dot" :class="connectionStatusColor"></span>
-                    {{ connectionStatusText }}
+                    <span class="w-2 h-2 rounded-full mr-1" :class="connectionColor"></span>
+                    {{ connectionText }}
                 </div>
             </div>
         </header>
@@ -164,10 +176,8 @@
                     </form>
                 </div>
                 <div class="space-y-3">
-                    <div v-if="isLoadingBudget" class="text-center py-8 text-gray-400 text-sm">
-                        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> 讀取雲端資料中...
-                    </div>
-                    <div v-else-if="sortedBudgetItems.length === 0" class="text-center py-8 text-gray-400 text-sm">尚未有記帳紀錄</div>
+                    <div v-if="connectionStatus === 'connecting'" class="text-center py-4 text-gray-400 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-1"></i> 載入中...</div>
+                    <div v-if="sortedBudgetItems.length === 0 && connectionStatus === 'connected'" class="text-center py-8 text-gray-400 text-sm">尚未有紀錄</div>
                     
                     <div v-for="item in sortedBudgetItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center shadow-sm">
                         <div class="flex items-center">
@@ -237,7 +247,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Firebase 設定
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyC_89NqMZPOuhOAkIgGYZou-ArNGG7tr0I",
             authDomain: "japan-trip-23e67.firebaseapp.com",
@@ -253,10 +263,8 @@
 
         createApp({
             setup() {
-                // 資料庫鑰匙 (Local)
-                const DB_TRIP = 'japan_trip_local_v7'; 
+                const DB_TRIP = 'japan_trip_local_v8'; 
                 
-                // 狀態
                 const currentTab = ref('itinerary');
                 const currentDayIndex = ref(0);
                 const tripData = ref([]);
@@ -267,10 +275,9 @@
                 const editDayIndex = ref(null);
                 const editIndex = ref(null);
                 const editForm = ref({ time: '', name: '', type: 'spot', desc: '', transport: '', cost: '' });
-                const isLoadingBudget = ref(true);
-                const connectionStatus = ref('connecting'); // connecting, connected, error
+                const connectionStatus = ref('connecting');
 
-                // 預設資料
+                // Default Data
                 const defaultTripData = [
                     { day: 1, date: "2/28", theme: "和歌山．加太線", spots: [{ time: "06:00", name: "關西機場", type: "transport", desc: "入境", tags: ["入境"], transport: "南海線" }, { time: "11:00", name: "淡嶋神社", type: "spot", desc: "加太線終點", tags: ["加太線"] }, { time: "13:00", name: "井出商店拉麵", type: "food", desc: "午餐", tags: ["必吃"], cost: "¥1000" }, { time: "16:00", name: "Dormy Inn", type: "hotel", desc: "Check-in", tags: ["住宿"] }] },
                     { day: 2, date: "3/1", theme: "南紀白濱溫泉", spots: [{ time: "09:00", name: "白濱站", type: "transport", desc: "前往白濱", tags: ["移動"], cost: "¥3740" }, { time: "11:00", name: "ToreTore 市場", type: "food", desc: "海鮮燒烤", tags: ["必吃"] }, { time: "16:00", name: "白浜御苑", type: "hotel", desc: "溫泉飯店", tags: ["溫泉"] }] },
@@ -282,34 +289,22 @@
                 const flights = ref([{ type: "去程", code: "GK50", dep: "TPE 台北", arr: "KIX 大阪", depTime: "02:30", arrTime: "06:00", duration: "2h 30m" }, { type: "回程", code: "GK51", dep: "KIX 大阪", arr: "TPE 台北", depTime: "23:10", arrTime: "01:30+1", duration: "3h 20m" }]);
                 const hotels = ref([{ date: "2/28", name: "Dormy Inn Premium Wakayama", address: "和歌山市美園町3-36" }, { date: "3/1", name: "白浜御苑", address: "和歌山県西牟婁郡白浜町1011" }, { date: "3/2-3/5", name: "APA Hotel Namba", address: "大阪市浪速区湊町1-2-13" }]);
 
-                // 初始化
                 onMounted(() => {
-                    // 1. 載入行程 (Local - 秒開)
                     const savedTrip = localStorage.getItem(DB_TRIP);
                     tripData.value = savedTrip ? JSON.parse(savedTrip) : JSON.parse(JSON.stringify(defaultTripData));
 
-                    // 2. 載入記帳 (Firebase - 背景讀取)
                     try {
                         const q = query(collection(db, "expenses"), orderBy("createdAt", "desc"));
                         onSnapshot(q, (snapshot) => {
                             budgetItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            isLoadingBudget.value = false;
                             connectionStatus.value = 'connected';
-                        }, (error) => {
-                            console.error("Firebase Error:", error);
-                            isLoadingBudget.value = false;
-                            connectionStatus.value = 'error';
-                        });
-                    } catch (e) {
-                        connectionStatus.value = 'error';
-                    }
+                        }, (err) => { connectionStatus.value = 'error'; console.error(err); });
+                    } catch (e) { connectionStatus.value = 'error'; }
                 });
 
-                // 行程儲存
                 const saveTripData = () => { localStorage.setItem(DB_TRIP, JSON.stringify(tripData.value)); };
                 const resetData = () => { if(confirm('重置行程？')) { tripData.value = JSON.parse(JSON.stringify(defaultTripData)); saveTripData(); } };
 
-                // 行程編輯
                 const openEditSpot = (d, i) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=i; editForm.value={...tripData.value[d].spots[i], tags:''}; showModal.value=true; };
                 const addNewSpot = (d) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=null; editForm.value={time:'12:00', name:'', type:'spot', desc:'', transport:'', cost:''}; showModal.value=true; };
                 const openEditTheme = (d) => { isEditingTheme.value=true; editDayIndex.value=d; editForm.value.name=tripData.value[d].theme; showModal.value=true; };
@@ -326,22 +321,12 @@
                 const deleteSpot = () => { if(confirm('刪除？')) { tripData.value[editDayIndex.value].spots.splice(editIndex.value, 1); saveTripData(); showModal.value=false; } };
                 const closeModal = () => showModal.value=false;
 
-                // 記帳邏輯
                 const addExpense = async () => {
                     if(!budgetForm.value.item || !budgetForm.value.amount) return;
-                    try {
-                        await addDoc(collection(db, "expenses"), {
-                            item: budgetForm.value.item,
-                            amount: budgetForm.value.amount,
-                            category: budgetForm.value.category,
-                            createdAt: serverTimestamp()
-                        });
-                        budgetForm.value.item=''; budgetForm.value.amount=null;
-                    } catch (e) { alert("新增失敗，請檢查網路"); }
+                    try { await addDoc(collection(db, "expenses"), { item: budgetForm.value.item, amount: budgetForm.value.amount, category: budgetForm.value.category, createdAt: serverTimestamp() }); budgetForm.value.item=''; budgetForm.value.amount=null; } catch (e) { alert("上傳失敗"); }
                 };
                 const deleteExpense = async (id) => { if(confirm('刪除？')) { try { await deleteDoc(doc(db, "expenses", id)); } catch (e) { alert("刪除失敗"); } } };
 
-                // Utils
                 const openMap = (d) => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(d)}`, '_blank');
                 const formatNumber = (n) => n ? n.toLocaleString() : '0';
                 const formatDate = (t) => { if(!t) return ''; const d = t.toDate ? t.toDate() : new Date(t); return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`; };
@@ -349,26 +334,17 @@
                 const getCategoryColor = (c) => ({'food':'bg-orange-500','transport':'bg-blue-500','shopping':'bg-pink-500','stay':'bg-indigo-500'}[c] || 'bg-gray-500');
                 const getCategoryIcon = (c) => `fa-solid ` + ({'food':'fa-utensils','transport':'fa-train','shopping':'fa-bag-shopping','stay':'fa-bed'}[c] || 'fa-tag');
                 
-                // Computed
                 const getPageTitle = computed(() => ({'itinerary':'行程一覽','info':'資訊','budget':'記帳'}[currentTab.value]));
                 const currentDayDate = computed(() => tripData.value[currentDayIndex.value]?.date || '');
                 const totalSpent = computed(() => budgetItems.value.reduce((s,i)=>s+(i.amount||0),0));
                 const sortedBudgetItems = computed(() => budgetItems.value);
-                const connectionStatusText = computed(() => {
-                    if (connectionStatus.value === 'connecting') return '連線中...';
-                    if (connectionStatus.value === 'connected') return '已連線';
-                    return '離線模式';
-                });
-                const connectionStatusColor = computed(() => {
-                    if (connectionStatus.value === 'connecting') return 'bg-yellow-500';
-                    if (connectionStatus.value === 'connected') return 'bg-green-500';
-                    return 'bg-red-500';
-                });
+                const connectionText = computed(() => ({'connecting':'連線中','connected':'已連線','error':'離線'}[connectionStatus.value]));
+                const connectionColor = computed(() => ({'connecting':'bg-yellow-500','connected':'bg-green-500','error':'bg-red-500'}[connectionStatus.value]));
 
                 return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, showModal, editForm, isEditingTheme, editIndex,
                     getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, openMap, formatNumber, formatDate, addExpense, deleteExpense,
                     getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData,
-                    isLoadingBudget, connectionStatusText, connectionStatusColor
+                    connectionText, connectionColor
                 };
             }
         }).mount('#app');

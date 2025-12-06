@@ -87,7 +87,7 @@
                             
                             <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ spot.time }}</span>
                             <h4 class="text-lg font-bold mt-1 flex items-center">{{ spot.name }} 
-                                <button @click.stop="openMap(spot.name)" class="ml-2 text-gray-300 text-sm"><i class="fa-solid fa-location-arrow"></i></button>
+                                <button @click.stop="searchNearby(spot.name, 'location')" class="ml-2 text-gray-300 text-sm"><i class="fa-solid fa-location-arrow"></i></button>
                             </h4>
                             
                             <p v-if="spot.desc" class="text-sm text-gray-600 mt-1 whitespace-pre-line">{{ spot.desc }}</p>
@@ -163,7 +163,7 @@
                                     <p class="text-xs text-gray-500 mt-1 mb-2">{{ hotel.date }}</p>
                                     <p class="text-sm text-gray-600 leading-snug">{{ hotel.address }}</p>
                                     <div class="flex gap-2 mt-3">
-                                        <button @click="openMap(hotel.name)" class="text-xs text-[#788a6d] font-bold flex items-center bg-gray-50 px-2 py-1 rounded">
+                                        <button @click="searchNearby(hotel.name, 'location')" class="text-xs text-[#788a6d] font-bold flex items-center bg-gray-50 px-2 py-1 rounded">
                                             <i class="fa-solid fa-map-pin mr-1"></i> 導航
                                         </button>
                                         <button @click="searchNearby(hotel.name, '便利商店')" class="text-xs text-blue-500 font-bold flex items-center bg-blue-50 px-2 py-1 rounded">
@@ -273,16 +273,27 @@
             <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
                 <div class="text-center mb-4">
                     <i :class="getSearchIcon(searchModalContent.type)" class="text-4xl text-[#788a6d] mb-2"></i>
-                    <h3 class="text-xl font-bold">附近 {{ searchModalContent.type }} 搜尋</h3>
+                    <h3 class="text-xl font-bold">
+                        {{ searchModalContent.type === 'location' ? '地點資訊確認' : '附近搜尋確認' }}
+                    </h3>
                 </div>
                 
                 <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
-                    <p class="text-sm font-bold text-gray-600 mb-1">您正在搜尋：</p>
-                    <p class="text-lg font-extrabold text-gray-800">{{ searchModalContent.location }} 附近 {{ searchModalContent.type }}</p>
+                     <p class="text-sm font-bold text-gray-600 mb-1">
+                        {{ searchModalContent.type === 'location' ? '即將開啟地點：' : '您正在搜尋：' }}
+                    </p>
+                    <p class="text-lg font-extrabold text-gray-800">
+                        {{ searchModalContent.location }}
+                        <span v-if="searchModalContent.type !== 'location'">附近 {{ searchModalContent.type }}</span>
+                    </p>
                 </div>
 
                 <div class="space-y-3 mb-4">
-                    <p v-if="searchModalContent.type === '美食'" class="text-sm text-gray-700">
+                    <p v-if="searchModalContent.type === 'location'" class="text-sm text-gray-700">
+                        系統將為您開啟 Google 地圖，顯示 **<span class="font-bold text-[#788a6d]">此地點的詳細資訊頁面</span>**。
+                        您可以查看 **<span class="font-bold text-blue-600">評論、照片、開放時間等資訊</span>**，**<span class="font-bold text-red-500">不會直接開始導航</span>**。
+                    </p>
+                    <p v-else-if="searchModalContent.type === '美食'" class="text-sm text-gray-700">
                         系統將為您開啟 Google 地圖，顯示 **<span class="font-bold text-red-500">評分 4.0 以上的高人氣餐廳列表</span>**。
                         您可以在地圖上點擊餐廳查看其 **<span class="font-bold text-orange-600">菜單及主要販售物</span>**。
                     </p>
@@ -294,7 +305,7 @@
                 <div class="grid grid-cols-2 gap-3 mt-4">
                     <button @click="showSearchModal = false" class="py-2 rounded bg-gray-100 text-gray-500 font-bold">取消</button>
                     <button @click="confirmSearchAndOpenMap" class="py-2 rounded bg-blue-500 text-white font-bold flex items-center justify-center active:bg-blue-600">
-                        <i class="fa-solid fa-map-marked-alt mr-2"></i> 開啟地圖導航
+                        <i class="fa-solid fa-map-marked-alt mr-2"></i> 確認開啟地圖
                     </button>
                 </div>
             </div>
@@ -415,16 +426,19 @@
                 };
                 const deleteExpense = async (id) => { if(confirm('刪除？')) { try { await deleteDoc(doc(db, "expenses", id)); } catch (e) { alert("刪除失敗"); } } };
 
-                // ★★★ 更新：searchNearby 函式以滿足美食列表和主要販售物的要求 ★★★
+                // ★★★ 更新：searchNearby 函式以符合只顯示地點資訊的需求 ★★★
                 const searchNearby = (location, type) => {
-                    let query = `${location} 附近的${type}`;
+                    let query = location; // 預設使用地點名稱進行單純搜尋
                     
                     if (type === '美食') {
                         // 針對美食加入 4.0 評分和熱門菜色的篩選關鍵字
                         query = `Best rated restaurants (4.0+) near ${location} with popular dishes`; 
                     } else if (type === '景點') {
-                        // 景點維持不變
                         query = `Attractions near ${location}`;
+                    } else if (type === '便利商店') {
+                         query = `Convenience stores near ${location}`;
+                    } else if (type === 'location') {
+                        query = location; // 單一地點導航，也只是搜尋地點名稱
                     }
                     
                     searchModalContent.value = { location, type, query };
@@ -434,13 +448,14 @@
                 // 確認後開啟地圖
                 const confirmSearchAndOpenMap = () => {
                     const { query } = searchModalContent.value;
-                    // Note: Use encodeURIComponent for the query string when opening a map URL
+                    // 使用標準的 Google Map 搜尋 URL，讓地圖決定是顯示單一地點資訊頁還是多點搜尋結果。
                     const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
                     window.open(mapUrl, '_blank');
                     showSearchModal.value = false;
                 };
 
-                const openMap = (d) => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(d)}`, '_blank');
+                // 移除原有的 openMap 函式，確保所有地圖開啟都經過彈窗
+                
                 const formatNumber = (n) => n ? n.toLocaleString() : '0';
                 const formatDate = (t) => { if(!t) return ''; const d = t.toDate ? t.toDate() : new Date(t); return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`; };
                 const getDotColor = (t) => ({'transport':'bg-gray-400','food':'bg-[#8f5a5a]','shopping':'bg-orange-400','hotel':'bg-indigo-400'}[t] || 'bg-[#788a6d]');
@@ -456,6 +471,7 @@
                 
                 // 搜尋彈窗的圖示
                 const getSearchIcon = (t) => {
+                    if (t === 'location') return 'fa-solid fa-map-pin';
                     if (t === '美食') return 'fa-solid fa-bowl-food';
                     if (t === '景點') return 'fa-solid fa-camera';
                     if (t === '便利商店') return 'fa-solid fa-store';
@@ -470,7 +486,7 @@
                 const connectionColor = computed(() => ({'connecting':'bg-yellow-500','connected':'bg-green-500','error':'bg-red-500'}[connectionStatus.value]));
 
                 return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, showModal, editForm, isEditingTheme, editIndex,
-                    getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, openMap, formatNumber, formatDate, addExpense, deleteExpense,
+                    getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, formatNumber, formatDate, addExpense, deleteExpense,
                     getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData,
                     connectionText, connectionColor, searchNearby, getPayerStyle,
                     // 導覽功能新增

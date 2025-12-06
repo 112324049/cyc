@@ -190,9 +190,9 @@
                             
                             <select v-model="budgetForm.payer" required class="w-full p-2 bg-gray-50 border rounded text-sm">
                                 <option value="" disabled>-- 誰付的? --</option>
-                                <option value="User">User</option>
-                                <option value="Partner">Partner</option>
-                                <option value="Joint">共同</option>
+                                <option value="陳小鯊">陳小鯊</option>
+                                <option value="黄臭豬">黄臭豬</option>
+                                <option value="共同">共同</option>
                             </select>
 
                             <input v-model.number="budgetForm.amount" type="number" placeholder="金額 (日幣)" required class="w-full p-2 bg-gray-50 border rounded text-sm">
@@ -268,6 +268,34 @@
                 </div>
             </div>
         </div>
+        
+        <div v-if="showSearchModal" class="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm" @click.self="showSearchModal = false">
+            <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+                <div class="text-center mb-4">
+                    <i :class="getSearchIcon(searchModalContent.type)" class="text-4xl text-[#788a6d] mb-2"></i>
+                    <h3 class="text-xl font-bold">附近 {{ searchModalContent.type }} 搜尋</h3>
+                </div>
+                
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
+                    <p class="text-sm font-bold text-gray-600 mb-1">您正在搜尋：</p>
+                    <p class="text-lg font-extrabold text-gray-800">{{ searchModalContent.location }} 附近 {{ searchModalContent.type }}</p>
+                </div>
+
+                <div class="space-y-3 mb-4">
+                    <p class="text-sm text-gray-700">
+                        系統將會為您開啟 Google 地圖，顯示 **<span class="font-bold text-[#8f5a5a]">{{ searchModalContent.location }}</span>** 周邊的 {{ searchModalContent.type }} 資訊，方便您快速導航或瀏覽評價。
+                    </p>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3 mt-4">
+                    <button @click="showSearchModal = false" class="py-2 rounded bg-gray-100 text-gray-500 font-bold">取消</button>
+                    <button @click="confirmSearchAndOpenMap" class="py-2 rounded bg-blue-500 text-white font-bold flex items-center justify-center active:bg-blue-600">
+                        <i class="fa-solid fa-map-marked-alt mr-2"></i> 開啟地圖導航
+                    </button>
+                </div>
+            </div>
+        </div>
+
 
         <nav class="fixed bottom-6 left-4 right-4 bg-white/95 border border-white/20 shadow-xl rounded-2xl h-16 flex items-center justify-around z-40">
             <button @click="currentTab = 'itinerary'" class="flex flex-col items-center w-16" :class="currentTab === 'itinerary' ? 'text-[#788a6d]' : 'text-gray-400'"><i class="fa-solid fa-route text-lg"></i><span class="text-[10px]">行程</span></button>
@@ -316,8 +344,7 @@
                 const tripData = ref(JSON.parse(JSON.stringify(defaultTripData)));
 
                 const budgetItems = ref([]);
-                // ★★★ 記帳表單新增 payer 欄位，預設為 User ★★★
-                const budgetForm = ref({ item: '', amount: null, category: 'food', payer: 'User' });
+                const budgetForm = ref({ item: '', amount: null, category: 'food', payer: '陳小鯊' });
                 
                 const showModal = ref(false);
                 const isEditingTheme = ref(false);
@@ -325,6 +352,11 @@
                 const editIndex = ref(null);
                 const editForm = ref({ time: '', name: '', type: 'spot', desc: '', transport: '', cost: '' });
                 const connectionStatus = ref('connecting');
+
+                // ★★★ 新增：搜尋彈窗狀態與內容 ★★★
+                const showSearchModal = ref(false);
+                const searchModalContent = ref({ location: '', type: '', query: '' });
+
 
                 const flights = ref([{ type: "去程", code: "GK50", dep: "TPE 台北", arr: "KIX 大阪", depTime: "02:30", arrTime: "06:00", duration: "2h 30m" }, { type: "回程", code: "GK51", dep: "KIX 大阪", arr: "TPE 台北", depTime: "23:10", arrTime: "01:30+1", duration: "3h 20m" }]);
                 const hotels = ref([{ date: "2/28", name: "Dormy Inn Premium Wakayama", address: "和歌山市美園町3-36" }, { date: "3/1", name: "白浜御苑", address: "和歌山県西牟婁郡白浜町1011" }, { date: "3/2-3/5", name: "APA Hotel Namba", address: "大阪市浪速区湊町1-2-13" }]);
@@ -366,7 +398,7 @@
                 const addExpense = async () => {
                     if(!budgetForm.value.item || !budgetForm.value.amount || !budgetForm.value.payer) return;
                     try { 
-                        // ★★★ 在 Firebase 寫入時，多存入 payer 欄位 ★★★
+                        // 在 Firebase 寫入時，多存入 payer 欄位
                         await addDoc(collection(db, "expenses"), { 
                             item: budgetForm.value.item, 
                             amount: budgetForm.value.amount, 
@@ -379,12 +411,22 @@
                 };
                 const deleteExpense = async (id) => { if(confirm('刪除？')) { try { await deleteDoc(doc(db, "expenses", id)); } catch (e) { alert("刪除失敗"); } } };
 
-                // 導遊功能
+                // ★★★ 修改：searchNearby 變為開啟彈窗 ★★★
                 const searchNearby = (location, type) => {
                     let query = `${location} 附近的${type}`;
                     if (type === '美食') query = `Restaurants near ${location}`;
                     if (type === '景點') query = `Attractions near ${location}`;
-                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`, '_blank');
+                    
+                    searchModalContent.value = { location, type, query };
+                    showSearchModal.value = true;
+                };
+
+                // ★★★ 新增：確認後開啟地圖 ★★★
+                const confirmSearchAndOpenMap = () => {
+                    const { query } = searchModalContent.value;
+                    const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
+                    window.open(mapUrl, '_blank');
+                    showSearchModal.value = false;
                 };
 
                 const openMap = (d) => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(d)}`, '_blank');
@@ -394,12 +436,19 @@
                 const getCategoryColor = (c) => ({'food':'bg-orange-500','transport':'bg-blue-500','shopping':'bg-pink-500','stay':'bg-indigo-500'}[c] || 'bg-gray-500');
                 const getCategoryIcon = (c) => `fa-solid ` + ({'food':'fa-utensils','transport':'fa-train','shopping':'fa-bag-shopping','stay':'fa-bed'}[c] || 'fa-tag');
                 
-                // ★★★ 依付款人設定顏色 ★★★
                 const getPayerStyle = (p) => {
-                    if (p === 'User') return 'bg-purple-100 text-purple-600';
-                    if (p === 'Partner') return 'bg-teal-100 text-teal-600';
-                    if (p === 'Joint') return 'bg-gray-100 text-gray-500';
-                    return 'bg-gray-100 text-gray-500';
+                    if (p === '陳小鯊') return 'bg-purple-100 text-purple-600';
+                    if (p === '黄臭豬') return 'bg-teal-100 text-teal-600';
+                    if (p === '共同') return 'bg-gray-100 text-gray-500';
+                    return 'bg-gray-100 text-gray-500'; 
+                };
+                
+                // ★★★ 新增：搜尋彈窗的圖示 ★★★
+                const getSearchIcon = (t) => {
+                    if (t === '美食') return 'fa-solid fa-bowl-food';
+                    if (t === '景點') return 'fa-solid fa-camera';
+                    if (t === '便利商店') return 'fa-solid fa-store';
+                    return 'fa-solid fa-magnifying-glass';
                 };
 
                 const getPageTitle = computed(() => ({'itinerary':'行程一覽','info':'資訊','budget':'記帳'}[currentTab.value]));
@@ -412,7 +461,9 @@
                 return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, showModal, editForm, isEditingTheme, editIndex,
                     getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, openMap, formatNumber, formatDate, addExpense, deleteExpense,
                     getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData,
-                    connectionText, connectionColor, searchNearby, getPayerStyle
+                    connectionText, connectionColor, searchNearby, getPayerStyle,
+                    // 導覽功能新增
+                    showSearchModal, searchModalContent, confirmSearchAndOpenMap, getSearchIcon
                 };
             }
         }).mount('#app');

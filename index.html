@@ -109,10 +109,40 @@
                             <i class="fa-solid fa-plus"></i> 新增行程
                         </button>
                     </div>
-                     <div class="text-center pb-8 pt-4">
-                        <button @click="resetData" class="text-xs text-gray-300 underline">重置回預設行程</button>
-                    </div>
                 </div>
+
+                <section class="mt-8 border-t border-gray-200 pt-4">
+                    <div class="flex items-center justify-between mb-3 pl-1">
+                        <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">備忘錄 / 待排行程 📝</h3>
+                        <div class="flex items-center text-xs text-gray-400">
+                            <span class="w-2 h-2 rounded-full mr-1" :class="connectionColor"></span>
+                            {{ connectionText }}
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm mb-4">
+                        <form @submit.prevent="addMemoItem" class="flex space-x-2">
+                            <input v-model="memoForm.content" type="text" placeholder="新增備註或待排行程..." required class="flex-1 p-2 bg-gray-50 border rounded text-sm">
+                            <button type="submit" class="w-10 h-10 bg-[#788a6d] text-white rounded-lg flex items-center justify-center active:bg-[#5a6b51]">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="space-y-3">
+                         <div v-if="memoItems.length === 0" class="text-center py-4 text-gray-400 text-sm">沒有任何備忘錄</div>
+                         
+                         <div v-for="item in memoItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-start shadow-sm">
+                            <p class="text-sm flex-1 mr-4 whitespace-pre-line">{{ item.content }}</p>
+                            <button @click="deleteMemoItem(item.id)" class="text-gray-300 hover:text-red-500 flex-shrink-0"><i class="fa-solid fa-trash text-xs"></i></button>
+                         </div>
+                    </div>
+                </section>
+                
+                <div class="text-center pb-8 pt-4">
+                    <button @click="resetData" class="text-xs text-gray-300 underline">重置回預設行程</button>
+                </div>
+
             </div>
 
             <div v-if="currentTab === 'info'" class="space-y-6 pt-4">
@@ -366,9 +396,14 @@
                 const budgetItems = ref([]);
                 const budgetForm = ref({ item: '', amount: null, category: 'food', payer: '陳小鯊' });
                 
-                // 購物清單狀態 (新增 payer 預設值)
+                // 購物清單狀態
                 const shoppingItems = ref([]);
-                const shoppingForm = ref({ item: '', qty: 1, price: null, payer: '共同' }); // 預設為共同
+                const shoppingForm = ref({ item: '', qty: 1, price: null, payer: '共同' });
+
+                // 備忘錄狀態 (New)
+                const memoItems = ref([]);
+                const memoForm = ref({ content: '' });
+
 
                 const showModal = ref(false);
                 const isEditingTheme = ref(false);
@@ -399,6 +434,12 @@
                         onSnapshot(qShopping, (snapshot) => {
                             shoppingItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         }, (err) => { console.error("Firebase Shopping Error:", err); });
+                        
+                        // 載入備忘錄資料 (New)
+                        const qMemo = query(collection(db, "memo"), orderBy("createdAt", "desc"));
+                        onSnapshot(qMemo, (snapshot) => {
+                            memoItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        }, (err) => { console.error("Firebase Memo Error:", err); });
 
                     } catch (e) { connectionStatus.value = 'error'; }
                 });
@@ -440,18 +481,17 @@
 
                 // 購物清單相關功能
                 const addShoppingItem = async () => {
-                    // 確保商品名稱和購買人必填
                     if(!shoppingForm.value.item || !shoppingForm.value.payer) return;
                     try {
                         await addDoc(collection(db, "shopping"), {
                             item: shoppingForm.value.item,
                             qty: shoppingForm.value.qty > 0 ? shoppingForm.value.qty : 1,
                             price: shoppingForm.value.price > 0 ? shoppingForm.value.price : null,
-                            payer: shoppingForm.value.payer, // ★★★ 新增 payer 欄位 ★★★
+                            payer: shoppingForm.value.payer,
                             isBought: false,
                             createdAt: serverTimestamp()
                         });
-                        shoppingForm.value = { item: '', qty: 1, price: null, payer: '共同' }; // 重設表單，payer 設回預設
+                        shoppingForm.value = { item: '', qty: 1, price: null, payer: '共同' };
                     } catch (e) {
                         alert("加入清單失敗");
                         console.error("Error adding shopping item: ", e);
@@ -480,6 +520,32 @@
                         } catch (e) {
                             alert("更新狀態失敗");
                             console.error("Error updating shopping item status: ", e);
+                        }
+                    }
+                };
+                
+                // 備忘錄相關功能 (New)
+                const addMemoItem = async () => {
+                    if (!memoForm.value.content) return;
+                    try {
+                        await addDoc(collection(db, "memo"), {
+                            content: memoForm.value.content,
+                            createdAt: serverTimestamp()
+                        });
+                        memoForm.value.content = ''; // 清空輸入框
+                    } catch (e) {
+                        alert("新增備忘錄失敗");
+                        console.error("Error adding memo item: ", e);
+                    }
+                };
+
+                const deleteMemoItem = async (id) => {
+                    if(confirm('確定刪除此備忘錄項目？')) {
+                        try {
+                            await deleteDoc(doc(db, "memo", id));
+                        } catch (e) {
+                            alert("刪除失敗");
+                            console.error("Error deleting memo item: ", e);
                         }
                     }
                 };
@@ -524,10 +590,11 @@
                 const connectionText = computed(() => ({'connecting':'連線中','connected':'已連線','error':'離線'}[connectionStatus.value]));
                 const connectionColor = computed(() => ({'connecting':'bg-yellow-500','connected':'bg-green-500','error':'bg-red-500'}[connectionStatus.value]));
 
-                return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, shoppingItems: sortedShoppingItems, shoppingForm, 
+                return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, shoppingItems: sortedShoppingItems, shoppingForm, memoItems, memoForm, // 新增 memoItems, memoForm
                     showModal, editForm, isEditingTheme, editIndex,
                     getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, formatNumber, formatDate, 
                     addExpense, deleteExpense, addShoppingItem, deleteShoppingItem, toggleBought,
+                    addMemoItem, deleteMemoItem, // 新增備忘錄函式
                     getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData,
                     connectionText, connectionColor, openMap, getPayerStyle, 
                 };

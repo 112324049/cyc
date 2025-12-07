@@ -19,6 +19,10 @@
         #crash-screen { display: none; padding: 20px; color: red; font-family: monospace; background: #fff0f0; height: 100vh; z-index: 99999; position: fixed; inset: 0; }
         .guide-btn { transition: all 0.2s; }
         .guide-btn:active { transform: scale(0.95); opacity: 0.8; }
+        /* 交通卡片樣式優化 */
+        .transport-card-content { display: flex; justify-content: space-between; align-items: center; }
+        .transport-card-middle { flex: 1; padding: 0 1rem; display: flex; flex-direction: column; align-items: center; }
+        .transport-card-endpoint { text-align: center; }
     </style>
 </head>
 <body class="text-gray-800 font-sans h-screen overflow-hidden flex flex-col">
@@ -101,7 +105,7 @@
                                 <span>費用</span><span class="font-mono font-bold">{{ spot.cost }}</span>
                             </div>
 
-                            </div>
+                        </div>
                     </div>
 
                     <div class="pl-8 pt-2">
@@ -147,35 +151,63 @@
 
             <div v-if="currentTab === 'info'" class="space-y-6 pt-4">
                 
-                <section>
-                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">交通資訊 (FLIGHTS & TRAINS)</h3>
+                <h2 class="text-base font-bold text-gray-500 uppercase tracking-widest mb-4 pl-1">TRANSPORTATION 交通資訊 ✈️🚆</h2>
+
+                <section class="border-b border-gray-200 pb-6">
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">🛫 Flights 航班資訊</h3>
                     <div class="bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm">
-                        <div v-for="(transport, idx) in flights" :key="idx" class="p-4 border-b border-gray-100 last:border-0">
+                        <div v-for="(flight, idx) in flightInfo" :key="idx" class="p-4 border-b border-gray-100 last:border-0">
                             <div class="flex justify-between items-center mb-2">
-                                <span class="text-xs px-2 py-0.5 rounded" :class="transport.type.includes('交通') ? 'bg-blue-100 text-blue-600 font-bold' : 'bg-[#8f5a5a]/10 text-[#8f5a5a] font-bold uppercase tracking-wider'">{{ transport.type }}</span>
-                                <span class="font-mono text-sm text-gray-500">{{ transport.code }}</span>
+                                <span class="text-xs px-2 py-0.5 rounded bg-[#8f5a5a]/10 text-[#8f5a5a] font-bold uppercase tracking-wider">{{ flight.type }}</span>
+                                <span class="font-mono text-sm text-gray-500">{{ flight.code }}</span>
                             </div>
-                            <div class="flex justify-between items-center">
-                                <div class="text-center">
-                                    <div class="text-xl font-bold">{{ transport.depTime }}</div>
-                                    <div class="text-xs text-gray-400">{{ transport.dep }}</div>
+                            <div class="transport-card-content">
+                                <div class="transport-card-endpoint">
+                                    <div class="text-xl font-bold">{{ flight.depTime }}</div>
+                                    <div class="text-xs text-gray-400">{{ flight.dep }}</div>
                                 </div>
-                                <div class="flex-1 px-4 flex flex-col items-center">
-                                    <i class="fa-solid" :class="transport.type.includes('交通') ? 'fa-train text-blue-500' : 'fa-plane text-[#788a6d]'" ></i>
-                                    <div class="h-[1px] w-full bg-gray-200 mt-1"></div>
-                                    <span class="text-[10px] text-gray-400 mt-1">{{ transport.duration }}</span>
+                                <div class="transport-card-middle">
+                                    <i class="fa-solid fa-plane text-[#788a6d]"></i>
+                                    <div class="h-[1px] w-full bg-gray-200 my-1"></div>
+                                    <span class="text-[10px] text-gray-400">{{ flight.duration }}</span>
                                 </div>
-                                <div class="text-center">
-                                    <div class="text-xl font-bold">{{ transport.arrTime }}</div>
-                                    <div class="text-xs text-gray-400">{{ transport.arr }}</div>
+                                <div class="transport-card-endpoint">
+                                    <div class="text-xl font-bold">{{ flight.arrTime }}</div>
+                                    <div class="text-xs text-gray-400">{{ flight.arr }}</div>
                                 </div>
-                            </div>
-                            <div v-if="transport.notes" class="mt-3 pt-3 border-t border-dashed border-gray-200 text-xs text-gray-500 font-bold">
-                                {{ transport.notes }}
                             </div>
                         </div>
                     </div>
-                    
+                </section>
+                
+                <section>
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">🚆 Trains 列車資訊</h3>
+                    <div class="bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                        <div v-for="(train, idx) in trainInfo" :key="idx" class="p-4 border-b border-gray-100 last:border-0">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-600 font-bold">{{ train.type }}</span>
+                                <span class="font-mono text-sm text-gray-500">{{ train.code }}</span>
+                            </div>
+                            <div class="transport-card-content">
+                                <div class="transport-card-endpoint">
+                                    <div class="text-xl font-bold">{{ train.depTime }}</div>
+                                    <div class="text-xs text-gray-400">{{ train.dep }}</div>
+                                </div>
+                                <div class="transport-card-middle">
+                                    <i class="fa-solid fa-train text-blue-500"></i>
+                                    <div class="h-[1px] w-full bg-gray-200 my-1"></div>
+                                    <span class="text-[10px] text-gray-400">{{ train.duration }}</span>
+                                </div>
+                                <div class="transport-card-endpoint">
+                                    <div class="text-xl font-bold">{{ train.arrTime }}</div>
+                                    <div class="text-xs text-gray-400">{{ train.arr }}</div>
+                                </div>
+                            </div>
+                            <div v-if="train.notes" class="mt-3 pt-3 border-t border-dashed border-gray-200 text-xs text-gray-500 font-bold">
+                                {{ train.notes }}
+                            </div>
+                        </div>
+                    </div>
                     <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm">
                         <p class="font-bold text-blue-600 mb-1 flex items-center"><i class="fa-solid fa-ticket-simple mr-2"></i> JR訂票官網</p>
                         <a href="https://www.westjr.co.jp/global/tc/ticket/overview/" target="_blank" class="text-blue-500 underline text-xs break-all">
@@ -183,7 +215,7 @@
                         </a>
                     </div>
                 </section>
-                <section>
+                <section class="mt-8 border-t border-gray-200 pt-4">
                     <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Hotels</h3>
                     <div class="space-y-3">
                         <div v-for="(hotel, idx) in hotels" :key="idx" class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
@@ -423,14 +455,18 @@
                 const editForm = ref({ time: '', name: '', type: 'spot', desc: '', transport: '', cost: '' });
                 const connectionStatus = ref('connecting');
 
-                // 更新後的交通資訊，包含來回航班和兩班 JR 特急列車
-                const flights = ref([
-                    { type: "去程 (FLIGHT)", code: "GK50", dep: "TPE 台北", arr: "KIX 大阪", depTime: "02:30", arrTime: "06:00", duration: "2h 30m" },
+                // 分離後的 Flights 資訊
+                const flightInfo = ref([
+                    { type: "去程", code: "GK50", dep: "TPE 台北", arr: "KIX 大阪", depTime: "02:30", arrTime: "06:00", duration: "2h 30m" },
+                    { type: "回程", code: "GK51", dep: "KIX 大阪", arr: "TPE 台北", depTime: "23:10", arrTime: "01:30+1", duration: "3h 20m" }
+                ]);
+
+                // 分離後的 Trains 資訊
+                const trainInfo = ref([
                     // Day 2 列車資訊
-                    { type: "交通 (Day 2 TRAIN)", code: "くろしお3號", dep: "和歌山站", arr: "白濱站", depTime: "10:06", arrTime: "11:37", duration: "1h 31m", notes: "每人約 ¥3,740 (指定席)" },
+                    { type: "Day 2 列車", code: "くろしお3號", dep: "和歌山站", arr: "白濱站", depTime: "10:06", arrTime: "11:37", duration: "1h 31m", notes: "每人約 ¥3,740 (指定席)" },
                     // Day 3 列車資訊
-                    { type: "交通 (Day 3 TRAIN)", code: "くろしお16號", dep: "白濱站", arr: "天王寺站", depTime: "10:26", arrTime: "12:33", duration: "2h 07m", notes: "每人約 ¥5,380 (指定席)" },
-                    { type: "回程 (FLIGHT)", code: "GK51", dep: "KIX 大阪", arr: "TPE 台北", depTime: "23:10", arrTime: "01:30+1", duration: "3h 20m" }
+                    { type: "Day 3 列車", code: "くろしお16號", dep: "白濱站", arr: "天王寺站", depTime: "10:26", arrTime: "12:33", duration: "2h 07m", notes: "每人約 ¥5,380 (指定席)" }
                 ]);
                 
                 const hotels = ref([{ date: "2/28", name: "Dormy Inn Premium Wakayama", address: "和歌山市美園町3-36" }, { date: "3/1", name: "白浜御苑", address: "和歌山県西牟婁郡白浜町1011" }, { date: "3/2-3/5", name: "APA Hotel Namba", address: "大阪市浪速区湊町1-2-13" }]);
@@ -610,7 +646,7 @@
                 const connectionText = computed(() => ({'connecting':'連線中','connected':'已連線','error':'離線'}[connectionStatus.value]));
                 const connectionColor = computed(() => ({'connecting':'bg-yellow-500','connected':'bg-green-500','error':'bg-red-500'}[connectionStatus.value]));
 
-                return { currentTab, currentDayIndex, tripData, flights, hotels, budgetItems, budgetForm, shoppingItems: sortedShoppingItems, shoppingForm, memoItems, memoForm, 
+                return { currentTab, currentDayIndex, tripData, flightInfo, trainInfo, hotels, budgetItems, budgetForm, shoppingItems: sortedShoppingItems, shoppingForm, memoItems, memoForm, 
                     showModal, editForm, isEditingTheme, editIndex,
                     getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, formatNumber, formatDate, 
                     addExpense, deleteExpense, addShoppingItem, deleteShoppingItem, toggleBought,

@@ -19,10 +19,6 @@
         #crash-screen { display: none; padding: 20px; color: red; font-family: monospace; background: #fff0f0; height: 100vh; z-index: 99999; position: fixed; inset: 0; }
         .guide-btn { transition: all 0.2s; }
         .guide-btn:active { transform: scale(0.95); opacity: 0.8; }
-        /* 交通卡片樣式優化 */
-        .transport-card-content { display: flex; justify-content: space-between; align-items: center; }
-        .transport-card-middle { flex: 1; padding: 0 1rem; display: flex; flex-direction: column; align-items: center; }
-        .transport-card-endpoint { text-align: center; }
     </style>
 </head>
 <body class="text-gray-800 font-sans h-screen overflow-hidden flex flex-col">
@@ -51,7 +47,7 @@
                 <span class="block text-2xl font-bold">{{ currentDayDate }}</span>
                 <span class="text-xs text-gray-400">Day {{ currentDayIndex + 1 }}</span>
             </div>
-            <div v-if="currentTab === 'budget' || currentTab === 'shopping'" class="text-right">
+            <div v-if="currentTab !== 'itinerary'" class="text-right">
                 <div class="flex items-center justify-end text-xs text-gray-400">
                     <span class="w-2 h-2 rounded-full mr-1" :class="connectionColor"></span>
                     {{ connectionText }}
@@ -70,6 +66,13 @@
                         <span class="text-xs font-bold">Day</span>
                         <span class="text-lg font-bold">{{ index + 1 }}</span>
                     </button>
+                </div>
+
+                <div class="text-center">
+                     <span class="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-400">
+                        <i class="fa-solid fa-cloud mr-1"></i> 
+                        {{ isTripLoading ? '行程同步中...' : '行程已連線雲端' }}
+                     </span>
                 </div>
 
                 <div v-if="tripData[currentDayIndex]" @click="openEditTheme(currentDayIndex)" class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition-transform">
@@ -118,10 +121,6 @@
                 <section class="mt-8 border-t border-gray-200 pt-4">
                     <div class="flex items-center justify-between mb-3 pl-1">
                         <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">備忘錄 / 待排行程 📝</h3>
-                        <div class="flex items-center text-xs text-gray-400">
-                            <span class="w-2 h-2 rounded-full mr-1" :class="connectionColor"></span>
-                            {{ connectionText }}
-                        </div>
                     </div>
                     
                     <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm mb-4">
@@ -144,7 +143,7 @@
                 </section>
                 
                 <div class="text-center pb-8 pt-4">
-                    <button @click="resetData" class="text-xs text-gray-300 underline">重置回預設行程</button>
+                    <button @click="resetData" class="text-xs text-red-300 underline">重置所有行程 (全團都會重置!)</button>
                 </div>
 
             </div>
@@ -272,7 +271,6 @@
                     </form>
                 </div>
                 <div class="space-y-3">
-                    <div v-if="connectionStatus === 'connecting'" class="text-center py-4 text-gray-400 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-1"></i> 載入中...</div>
                     <div v-else-if="sortedBudgetItems.length === 0" class="text-center py-8 text-gray-400 text-sm">尚未有紀錄</div>
                     
                     <div v-for="item in sortedBudgetItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center shadow-sm">
@@ -321,7 +319,6 @@
                 </div>
 
                 <div class="space-y-3">
-                    <div v-if="connectionStatus === 'connecting'" class="text-center py-4 text-gray-400 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-1"></i> 載入中...</div>
                     <div v-else-if="shoppingItems.length === 0" class="text-center py-8 text-gray-400 text-sm">清單目前是空的喔！</div>
 
                     <div v-for="item in shoppingItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center shadow-sm transition-all" :class="{'opacity-50': item.isBought}">
@@ -400,7 +397,7 @@
     <script type="module">
         import { createApp, ref, computed, onMounted } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // Firebase Config
         const firebaseConfig = {
@@ -435,6 +432,7 @@
                 
                 // 使用 JSON 複製一份，確保不連動
                 const tripData = ref(JSON.parse(JSON.stringify(defaultTripData)));
+                const isTripLoading = ref(true);
 
                 const budgetItems = ref([]);
                 const budgetForm = ref({ item: '', amount: null, category: 'food', payer: '陳小鯊' });
@@ -455,43 +453,47 @@
                 const editForm = ref({ time: '', name: '', type: 'spot', desc: '', transport: '', cost: '' });
                 const connectionStatus = ref('connecting');
 
-                // 分離後的 Flights 資訊
                 const flightInfo = ref([
-                    { type: "去程", code: "GK50", dep: "TPE 台北", arr: "KIX 大阪", depTime: "02:30", arrTime: "06:00", duration: "2h 30m" },
-                    { type: "回程", code: "GK51", dep: "KIX 大阪", arr: "TPE 台北", depTime: "23:10", arrTime: "01:30+1", duration: "3h 20m" }
+                    { type: "去程 (FLIGHT)", code: "GK50", dep: "TPE 台北", arr: "KIX 大阪", depTime: "02:30", arrTime: "06:00", duration: "2h 30m" },
+                    { type: "回程 (FLIGHT)", code: "GK51", dep: "KIX 大阪", arr: "TPE 台北", depTime: "23:10", arrTime: "01:30+1", duration: "3h 20m" }
                 ]);
 
-                // 分離後的 Trains 資訊
                 const trainInfo = ref([
-                    // Day 2 列車資訊
                     { type: "Day 2 列車", code: "くろしお3號", dep: "和歌山站", arr: "白濱站", depTime: "10:06", arrTime: "11:37", duration: "1h 31m", notes: "每人約 ¥3,740 (指定席)" },
-                    // Day 3 列車資訊
                     { type: "Day 3 列車", code: "くろしお16號", dep: "白濱站", arr: "天王寺站", depTime: "10:26", arrTime: "12:33", duration: "2h 07m", notes: "每人約 ¥5,380 (指定席)" }
                 ]);
                 
                 const hotels = ref([{ date: "2/28", name: "Dormy Inn Premium Wakayama", address: "和歌山市美園町3-36" }, { date: "3/1", name: "白浜御苑", address: "和歌山県西牟婁郡白浜町1011" }, { date: "3/2-3/5", name: "APA Hotel Namba", address: "大阪市浪速区湊町1-2-13" }]);
 
                 onMounted(() => {
-                    const savedTrip = localStorage.getItem(DB_TRIP);
-                    if (savedTrip) {
-                        tripData.value = JSON.parse(savedTrip);
-                    }
-
                     try {
-                        // 載入記帳資料
+                        // 1. 雲端行程同步 (Trips)
+                        const tripRef = doc(db, "trips", "japan_2026");
+                        onSnapshot(tripRef, (docSnap) => {
+                            if (docSnap.exists()) {
+                                tripData.value = docSnap.data().days;
+                            } else {
+                                // 如果雲端沒資料，就初始化一份
+                                setDoc(tripRef, { days: defaultTripData });
+                                tripData.value = defaultTripData;
+                            }
+                            isTripLoading.value = false;
+                        });
+
+                        // 2. 記帳同步
                         const qBudget = query(collection(db, "expenses"), orderBy("createdAt", "desc"));
                         onSnapshot(qBudget, (snapshot) => {
                             budgetItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                             connectionStatus.value = 'connected';
                         }, (err) => { connectionStatus.value = 'error'; console.error("Firebase Budget Error:", err); });
 
-                        // 載入購物清單資料
+                        // 3. 購物同步
                         const qShopping = query(collection(db, "shopping"), orderBy("createdAt", "desc"));
                         onSnapshot(qShopping, (snapshot) => {
                             shoppingItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         }, (err) => { console.error("Firebase Shopping Error:", err); });
                         
-                        // 載入備忘錄資料
+                        // 4. 備忘錄同步
                         const qMemo = query(collection(db, "memo"), orderBy("createdAt", "desc"));
                         onSnapshot(qMemo, (snapshot) => {
                             memoItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -500,8 +502,22 @@
                     } catch (e) { connectionStatus.value = 'error'; }
                 });
 
-                const saveTripData = () => { localStorage.setItem(DB_TRIP, JSON.stringify(tripData.value)); };
-                const resetData = () => { if(confirm('重置行程？')) { tripData.value = JSON.parse(JSON.stringify(defaultTripData)); saveTripData(); } };
+                // ★★★ 雲端行程儲存函式 ★★★
+                const saveTripData = async () => {
+                    try {
+                        await setDoc(doc(db, "trips", "japan_2026"), { days: tripData.value });
+                    } catch (e) {
+                        console.error("行程儲存失敗:", e);
+                        alert("行程儲存失敗，請檢查網路！");
+                    }
+                };
+                
+                const resetData = () => { 
+                    if(confirm('【警告】這將重置所有人的行程資料！確定嗎？')) { 
+                        tripData.value = JSON.parse(JSON.stringify(defaultTripData)); 
+                        saveTripData(); 
+                    } 
+                };
 
                 const openEditSpot = (d, i) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=i; editForm.value={...tripData.value[d].spots[i], tags:[]}; showModal.value=true; };
                 const addNewSpot = (d) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=null; editForm.value={time:'12:00', name:'', type:'spot', desc:'', transport:'', cost:''}; showModal.value=true; };
@@ -653,6 +669,7 @@
                     addMemoItem, deleteMemoItem, 
                     getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData,
                     connectionText, connectionColor, openMap, getPayerStyle, 
+                    isTripLoading // 新增回傳
                 };
             }
         }).mount('#app');

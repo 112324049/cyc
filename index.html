@@ -15,11 +15,9 @@
         body { -webkit-tap-highlight-color: transparent; background-color: #fdfcf8; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         [v-cloak] { display: none; }
-        /* 錯誤訊息框 */
         #crash-screen { display: none; padding: 20px; color: red; font-family: monospace; background: #fff0f0; height: 100vh; z-index: 99999; position: fixed; inset: 0; }
         .guide-btn { transition: all 0.2s; }
         .guide-btn:active { transform: scale(0.95); opacity: 0.8; }
-        /* 交通卡片樣式優化 */
         .transport-card-content { display: flex; justify-content: space-between; align-items: center; }
         .transport-card-middle { flex: 1; padding: 0 1rem; display: flex; flex-direction: column; align-items: center; }
         .transport-card-endpoint { text-align: center; }
@@ -128,16 +126,12 @@
                     <div class="flex items-center justify-between mb-3 pl-1">
                         <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">備忘錄 / 待排行程 📝</h3>
                     </div>
-                    
                     <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm mb-4">
                         <form @submit.prevent="addMemoItem" class="flex space-x-2">
-                            <input v-model="memoForm.content" type="text" placeholder="新增備註或待排行程..." required class="flex-1 p-2 bg-gray-50 border rounded text-sm">
-                            <button type="submit" class="w-10 h-10 bg-[#788a6d] text-white rounded-lg flex items-center justify-center active:bg-[#5a6b51]">
-                                <i class="fa-solid fa-plus"></i>
-                            </button>
+                            <input v-model="memoForm.content" type="text" placeholder="新增備註..." required class="flex-1 p-2 bg-gray-50 border rounded text-sm">
+                            <button type="submit" class="w-10 h-10 bg-[#788a6d] text-white rounded-lg flex items-center justify-center active:bg-[#5a6b51]"><i class="fa-solid fa-plus"></i></button>
                         </form>
                     </div>
-
                     <div class="space-y-3">
                          <div v-if="memoItems.length === 0" class="text-center py-4 text-gray-400 text-sm">沒有任何備忘錄</div>
                          <div v-for="item in memoItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-start shadow-sm">
@@ -150,13 +144,10 @@
                 <div class="text-center pb-8 pt-4">
                     <button @click="resetData" class="text-xs text-red-300 underline">重置所有行程 (全團都會重置!)</button>
                 </div>
-
             </div>
 
             <div v-if="currentTab === 'info'" class="space-y-6 pt-4">
-                
                 <h2 class="text-base font-bold text-gray-500 uppercase tracking-widest mb-4 pl-1">TRANSPORTATION 交通資訊 ✈️🚆</h2>
-
                 <section class="border-b border-gray-200 pb-6">
                     <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">🛫 Flights 航班資訊</h3>
                     <div class="bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm">
@@ -166,24 +157,13 @@
                                 <span class="font-mono text-sm text-gray-500">{{ flight.code }}</span>
                             </div>
                             <div class="transport-card-content">
-                                <div class="transport-card-endpoint">
-                                    <div class="text-xl font-bold">{{ flight.depTime }}</div>
-                                    <div class="text-xs text-gray-400">{{ flight.dep }}</div>
-                                </div>
-                                <div class="transport-card-middle">
-                                    <i class="fa-solid fa-plane text-[#788a6d]"></i>
-                                    <div class="h-[1px] w-full bg-gray-200 my-1"></div>
-                                    <span class="text-[10px] text-gray-400">{{ flight.duration }}</span>
-                                </div>
-                                <div class="transport-card-endpoint">
-                                    <div class="text-xl font-bold">{{ flight.arrTime }}</div>
-                                    <div class="text-xs text-gray-400">{{ flight.arr }}</div>
-                                </div>
+                                <div class="transport-card-endpoint"><div class="text-xl font-bold">{{ flight.depTime }}</div><div class="text-xs text-gray-400">{{ flight.dep }}</div></div>
+                                <div class="transport-card-middle"><i class="fa-solid fa-plane text-[#788a6d]"></i><div class="h-[1px] w-full bg-gray-200 my-1"></div><span class="text-[10px] text-gray-400">{{ flight.duration }}</span></div>
+                                <div class="transport-card-endpoint"><div class="text-xl font-bold">{{ flight.arrTime }}</div><div class="text-xs text-gray-400">{{ flight.arr }}</div></div>
                             </div>
                         </div>
                     </div>
                 </section>
-                
                 <section>
                     <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">🚆 Trains 列車資訊</h3>
                     <div class="bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm">
@@ -193,52 +173,27 @@
                                 <span class="font-mono text-sm text-gray-500">{{ train.code }}</span>
                             </div>
                             <div class="transport-card-content">
-                                <div class="transport-card-endpoint">
-                                    <div class="text-xl font-bold">{{ train.depTime }}</div>
-                                    <div class="text-xs text-gray-400">{{ train.dep }}</div>
-                                </div>
-                                <div class="transport-card-middle">
-                                    <i class="fa-solid fa-train text-blue-500"></i>
-                                    <div class="h-[1px] w-full bg-gray-200 my-1"></div>
-                                    <span class="text-[10px] text-gray-400">{{ train.duration }}</span>
-                                </div>
-                                <div class="transport-card-endpoint">
-                                    <div class="text-xl font-bold">{{ train.arrTime }}</div>
-                                    <div class="text-xs text-gray-400">{{ train.arr }}</div>
-                                </div>
+                                <div class="transport-card-endpoint"><div class="text-xl font-bold">{{ train.depTime }}</div><div class="text-xs text-gray-400">{{ train.dep }}</div></div>
+                                <div class="transport-card-middle"><i class="fa-solid fa-train text-blue-500"></i><div class="h-[1px] w-full bg-gray-200 my-1"></div><span class="text-[10px] text-gray-400">{{ train.duration }}</span></div>
+                                <div class="transport-card-endpoint"><div class="text-xl font-bold">{{ train.arrTime }}</div><div class="text-xs text-gray-400">{{ train.arr }}</div></div>
                             </div>
-                            <div v-if="train.notes" class="mt-3 pt-3 border-t border-dashed border-gray-200 text-xs text-gray-500 font-bold">
-                                {{ train.notes }}
-                            </div>
+                            <div v-if="train.notes" class="mt-3 pt-3 border-t border-dashed border-gray-200 text-xs text-gray-500 font-bold">{{ train.notes }}</div>
                         </div>
                     </div>
-                    <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm">
-                        <p class="font-bold text-blue-600 mb-1 flex items-center"><i class="fa-solid fa-ticket-simple mr-2"></i> JR訂票官網</p>
-                        <a href="https://www.westjr.co.jp/global/tc/ticket/overview/" target="_blank" class="text-blue-500 underline text-xs break-all">
-                            JR-WEST ONLINE TRAIN RESERVATION (繁體中文)
-                        </a>
-                    </div>
                 </section>
-
                 <section class="mt-8 border-t border-gray-200 pt-4">
                     <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Hotels</h3>
                     <div class="space-y-3">
                         <div v-for="(hotel, idx) in hotels" :key="idx" class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
                             <div class="flex items-start">
-                                <div class="bg-[#788a6d]/10 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-[#788a6d] mr-3">
-                                    <i class="fa-solid fa-bed"></i>
-                                </div>
+                                <div class="bg-[#788a6d]/10 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-[#788a6d] mr-3"><i class="fa-solid fa-bed"></i></div>
                                 <div>
                                     <h4 class="font-bold">{{ hotel.name }}</h4>
                                     <p class="text-xs text-gray-500 mt-1 mb-2">{{ hotel.date }}</p>
                                     <p class="text-sm text-gray-600 leading-snug">{{ hotel.address }}</p>
                                     <div class="flex gap-2 mt-3">
-                                        <button @click="openMap(hotel.name, 'location')" class="text-xs text-[#788a6d] font-bold flex items-center bg-gray-50 px-2 py-1 rounded">
-                                            <i class="fa-solid fa-map-pin mr-1"></i> 導航
-                                        </button>
-                                        <button @click="openMap(hotel.name, '便利商店')" class="text-xs text-blue-500 font-bold flex items-center bg-blue-50 px-2 py-1 rounded">
-                                            <i class="fa-solid fa-store mr-1"></i> 找超商
-                                        </button>
+                                        <button @click="openMap(hotel.name, 'location')" class="text-xs text-[#788a6d] font-bold flex items-center bg-gray-50 px-2 py-1 rounded"><i class="fa-solid fa-map-pin mr-1"></i> 導航</button>
+                                        <button @click="openMap(hotel.name, '便利商店')" class="text-xs text-blue-500 font-bold flex items-center bg-blue-50 px-2 py-1 rounded"><i class="fa-solid fa-store mr-1"></i> 找超商</button>
                                     </div>
                                 </div>
                             </div>
@@ -253,6 +208,7 @@
                     <h2 class="text-3xl font-mono font-bold mt-1">¥{{ formatNumber(totalSpent) }}</h2>
                     <p class="text-xs text-gray-500 mt-2">約 TWD {{ formatNumber(Math.round(totalSpent * 0.20)) }}</p>
                 </div>
+                
                 <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
                     <form @submit.prevent="addExpense" class="space-y-3">
                         <div class="grid grid-cols-2 gap-3">
@@ -268,14 +224,14 @@
                                 <option value="food">飲食</option><option value="transport">交通</option><option value="shopping">購物</option><option value="stay">住宿</option><option value="other">其他</option>
                             </select>
                         </div>
-                        <button type="submit" class="w-full bg-[#788a6d] text-white py-2 rounded font-bold text-sm shadow active:bg-[#5a6b51]">
-                            <i class="fa-solid fa-plus mr-1"></i> 記上一筆
-                        </button>
+                        <button type="submit" class="w-full bg-[#788a6d] text-white py-2 rounded font-bold text-sm shadow active:bg-[#5a6b51]"><i class="fa-solid fa-plus mr-1"></i> 記上一筆</button>
                     </form>
                 </div>
+
                 <div class="space-y-3">
                     <div v-if="connectionStatus === 'connecting'" class="text-center py-4 text-gray-400 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-1"></i> 載入中...</div>
                     <div v-else-if="sortedBudgetItems.length === 0" class="text-center py-8 text-gray-400 text-sm">尚未有紀錄</div>
+                    
                     <div v-for="item in sortedBudgetItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center shadow-sm">
                         <div class="flex items-center">
                             <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs mr-3 text-white" :class="getCategoryColor(item.category)">
@@ -289,7 +245,11 @@
                         <div class="flex flex-col items-end">
                             <span class="text-xs font-bold px-2 py-0.5 rounded" :class="getPayerStyle(item.payer)">{{ item.payer }}</span>
                             <span class="font-mono font-bold mt-1">¥{{ formatNumber(item.amount) }}</span>
-                            <button @click="deleteExpense(item.id)" class="text-gray-300 hover:text-red-500 mt-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                            
+                            <div class="mt-2 flex gap-3">
+                                <button @click="openEditBudget(item)" class="text-gray-300 hover:text-[#788a6d]"><i class="fa-solid fa-pen text-xs"></i></button>
+                                <button @click="deleteExpense(item.id)" class="text-gray-300 hover:text-red-500"><i class="fa-solid fa-trash text-xs"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -299,7 +259,6 @@
                 <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
                     <form @submit.prevent="addShoppingItem" class="space-y-3">
                         <input v-model="shoppingForm.item" type="text" placeholder="想買的商品名稱..." required class="w-full p-2 bg-gray-50 border rounded text-sm">
-                        
                         <div class="grid grid-cols-2 gap-3">
                             <select v-model="shoppingForm.payer" required class="w-full p-2 bg-gray-50 border rounded text-sm">
                                 <option value="" disabled>-- 誰想買? --</option>
@@ -311,10 +270,7 @@
                              <input v-model="shoppingForm.price" type="number" placeholder="預估單價 (日圓, 可選)" class="col-span-2 w-full p-2 bg-gray-50 border rounded text-sm">
                              <input v-model="shoppingForm.url" type="url" placeholder="商品連結 (網址)..." class="col-span-2 w-full p-2 bg-gray-50 border rounded text-sm">
                         </div>
-                        
-                        <button type="submit" class="w-full bg-[#8f5a5a] text-white py-2 rounded font-bold text-sm shadow active:bg-[#7a4848]">
-                            <i class="fa-solid fa-cart-shopping mr-1"></i> 加入購物清單
-                        </button>
+                        <button type="submit" class="w-full bg-[#8f5a5a] text-white py-2 rounded font-bold text-sm shadow active:bg-[#7a4848]"><i class="fa-solid fa-cart-shopping mr-1"></i> 加入購物清單</button>
                     </form>
                 </div>
 
@@ -339,13 +295,13 @@
                             </div>
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="text-xs font-bold px-2 py-0.5 rounded mb-1" :class="getPayerStyle(item.payer)">
-                                {{ item.payer }}
-                            </span>
-                            <span v-if="item.price" class="font-mono font-bold text-base">
-                                ¥{{ formatNumber(item.qty * item.price) }}
-                            </span>
-                            <button @click="deleteShoppingItem(item.id)" class="text-gray-300 hover:text-red-500 mt-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                            <span class="text-xs font-bold px-2 py-0.5 rounded mb-1" :class="getPayerStyle(item.payer)">{{ item.payer }}</span>
+                            <span v-if="item.price" class="font-mono font-bold text-base">¥{{ formatNumber(item.qty * item.price) }}</span>
+                            
+                            <div class="mt-2 flex gap-3">
+                                <button @click="openEditShopping(item)" class="text-gray-300 hover:text-[#788a6d]"><i class="fa-solid fa-pen text-xs"></i></button>
+                                <button @click="deleteShoppingItem(item.id)" class="text-gray-300 hover:text-red-500"><i class="fa-solid fa-trash text-xs"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -355,42 +311,81 @@
 
         <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm" @click.self="closeModal">
             <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
-                <h3 class="text-lg font-bold mb-4 text-center">{{ isEditingTheme ? '編輯主題' : '編輯行程' }}</h3>
+                <h3 class="text-lg font-bold mb-4 text-center">
+                    {{ isEditingTheme ? '編輯主題' : (editType === 'budget' ? '編輯記帳' : (editType === 'shopping' ? '編輯購物項目' : '編輯行程')) }}
+                </h3>
+                
                 <div class="space-y-3 max-h-[60vh] overflow-y-auto">
-                    <div v-if="!isEditingTheme">
+                    
+                    <div v-if="editType === 'spot' && !isEditingTheme">
                         <label class="text-xs font-bold text-gray-500">時間</label>
                         <input v-model="editForm.time" type="time" class="w-full border rounded p-2 text-sm">
                     </div>
+
                     <div>
-                        <label class="text-xs font-bold text-gray-500">名稱</label>
+                        <label class="text-xs font-bold text-gray-500">{{ editType === 'budget' || editType === 'shopping' ? '品項名稱' : '名稱' }}</label>
                         <input v-model="editForm.name" type="text" class="w-full border rounded p-2 text-sm font-bold">
                     </div>
-                    <div v-if="!isEditingTheme">
+
+                    <div v-if="editType === 'spot' && !isEditingTheme">
                         <label class="text-xs font-bold text-gray-500">類型</label>
                         <select v-model="editForm.type" class="w-full border rounded p-2 text-sm">
                             <option value="spot">景點</option><option value="food">飲食</option><option value="transport">交通</option><option value="shopping">購物</option><option value="hotel">住宿</option>
                         </select>
                     </div>
-                    <div v-if="!isEditingTheme">
+
+                    <div v-if="editType === 'budget' || editType === 'shopping'">
+                        <label class="text-xs font-bold text-gray-500">{{ editType === 'budget' ? '付款人' : '購買人' }}</label>
+                        <select v-model="editForm.payer" class="w-full border rounded p-2 text-sm">
+                            <option value="陳小鯊">陳小鯊</option><option value="黄臭豬">黄臭豬</option><option value="共同">共同</option>
+                        </select>
+                    </div>
+
+                    <div v-if="editType === 'budget'">
+                        <label class="text-xs font-bold text-gray-500">金額 (日幣)</label>
+                        <input v-model.number="editForm.amount" type="number" class="w-full border rounded p-2 text-sm">
+                        
+                        <label class="text-xs font-bold text-gray-500 mt-3 block">類別</label>
+                        <select v-model="editForm.category" class="w-full border rounded p-2 text-sm">
+                             <option value="food">飲食</option><option value="transport">交通</option><option value="shopping">購物</option><option value="stay">住宿</option><option value="other">其他</option>
+                        </select>
+                    </div>
+
+                    <div v-if="editType === 'shopping'">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs font-bold text-gray-500">數量</label>
+                                <input v-model.number="editForm.qty" type="number" class="w-full border rounded p-2 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-500">預估單價</label>
+                                <input v-model.number="editForm.price" type="number" class="w-full border rounded p-2 text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="editType === 'spot' && !isEditingTheme">
                         <label class="text-xs font-bold text-gray-500">備註</label>
                         <textarea v-model="editForm.desc" rows="3" class="w-full border rounded p-2 text-sm"></textarea>
                     </div>
-                    <div v-if="!isEditingTheme">
-                        <label class="text-xs font-bold text-gray-500">費用</label>
+                    <div v-if="editType === 'spot' && !isEditingTheme">
+                        <label class="text-xs font-bold text-gray-500">費用說明</label>
                         <input v-model="editForm.cost" type="text" class="w-full border rounded p-2 text-sm">
                     </div>
-                    <div v-if="!isEditingTheme">
+
+                    <div v-if="(editType === 'spot' && !isEditingTheme) || editType === 'shopping'">
                         <label class="text-xs font-bold text-gray-500">相關連結 (網址)</label>
                         <input v-model="editForm.url" type="url" placeholder="https://..." class="w-full border rounded p-2 text-sm">
                     </div>
-
-                    <div v-if="!isEditingTheme && editIndex !== null" class="pt-2">
+                    
+                    <div v-if="editType === 'spot' && !isEditingTheme && editIndex !== null" class="pt-2">
                         <button @click="deleteSpot" class="text-red-500 text-xs w-full py-2">刪除此行程</button>
                     </div>
                 </div>
+
                 <div class="grid grid-cols-2 gap-3 mt-4">
                     <button @click="closeModal" class="py-2 rounded bg-gray-100 text-gray-500 font-bold">取消</button>
-                    <button @click="saveEdit" class="py-2 rounded bg-[#788a6d] text-white font-bold">儲存</button>
+                    <button @click="saveEdit" class="py-2 rounded bg-[#788a6d] text-white font-bold">儲存更新</button>
                 </div>
             </div>
         </div>
@@ -424,12 +419,9 @@
 
         createApp({
             setup() {
-                const DB_TRIP = 'japan_trip_local_v15';
-                
                 const currentTab = ref('itinerary');
                 const currentDayIndex = ref(0);
                 
-                // 預設資料
                 const defaultTripData = [
                     { day: 1, date: "2/28", theme: "和歌山．加太線", spots: [{ time: "06:00", name: "關西機場", type: "transport", desc: "入境", tags: ["入境"], transport: "南海線" }, { time: "11:00", name: "淡嶋神社", type: "spot", desc: "加太線終點", tags: ["加太線"] }, { time: "13:00", name: "井出商店拉麵", type: "food", desc: "午餐", tags: ["必吃"], cost: "¥1000" }, { time: "16:00", name: "Dormy Inn", type: "hotel", desc: "Check-in", tags: ["住宿"] }] },
                     { day: 2, date: "3/1", theme: "南紀白濱溫泉", spots: [{ time: "09:00", name: "白濱站", type: "transport", desc: "前往白濱", tags: ["移動"], cost: "¥3740" }, { time: "11:00", name: "ToreTore 市場", type: "food", desc: "海鮮燒烤", tags: ["必吃"] }, { time: "16:00", name: "白浜御苑", type: "hotel", desc: "溫泉飯店", tags: ["溫泉"] }] },
@@ -446,7 +438,6 @@
                 const budgetForm = ref({ item: '', amount: null, category: 'food', payer: '陳小鯊' });
                 
                 const shoppingItems = ref([]);
-                // 購物表單新增 url
                 const shoppingForm = ref({ item: '', qty: 1, price: null, payer: '共同', url: '' });
 
                 const memoItems = ref([]);
@@ -454,10 +445,16 @@
 
                 const showModal = ref(false);
                 const isEditingTheme = ref(false);
+                const editType = ref('spot'); // spot, budget, shopping
                 const editDayIndex = ref(null);
                 const editIndex = ref(null);
-                // 行程編輯表單新增 url
-                const editForm = ref({ time: '', name: '', type: 'spot', desc: '', transport: '', cost: '', url: '' });
+                const editId = ref(null); // Firestore ID
+
+                // 統一的編輯表單物件
+                const editForm = ref({ 
+                    time: '', name: '', type: 'spot', desc: '', transport: '', cost: '', url: '', 
+                    amount: 0, category: 'food', payer: '陳小鯊', qty: 1, price: 0 
+                });
                 const connectionStatus = ref('connecting');
 
                 const flightInfo = ref([
@@ -476,208 +473,144 @@
                     try {
                         const tripRef = doc(db, "trips", "japan_2026");
                         onSnapshot(tripRef, (docSnap) => {
-                            if (docSnap.exists()) {
-                                tripData.value = docSnap.data().days;
-                            } else {
-                                setDoc(tripRef, { days: defaultTripData });
-                                tripData.value = defaultTripData;
-                            }
+                            if (docSnap.exists()) { tripData.value = docSnap.data().days; } 
+                            else { setDoc(tripRef, { days: defaultTripData }); tripData.value = defaultTripData; }
                             isTripLoading.value = false;
                         });
 
                         const qBudget = query(collection(db, "expenses"), orderBy("createdAt", "desc"));
-                        onSnapshot(qBudget, (snapshot) => {
-                            budgetItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            connectionStatus.value = 'connected';
-                        }, (err) => { connectionStatus.value = 'error'; console.error("Firebase Budget Error:", err); });
+                        onSnapshot(qBudget, (snapshot) => { budgetItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); connectionStatus.value = 'connected'; }, (err) => { connectionStatus.value = 'error'; });
 
                         const qShopping = query(collection(db, "shopping"), orderBy("createdAt", "desc"));
-                        onSnapshot(qShopping, (snapshot) => {
-                            shoppingItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        }, (err) => { console.error("Firebase Shopping Error:", err); });
+                        onSnapshot(qShopping, (snapshot) => { shoppingItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); }, (err) => { });
                         
                         const qMemo = query(collection(db, "memo"), orderBy("createdAt", "desc"));
-                        onSnapshot(qMemo, (snapshot) => {
-                            memoItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        }, (err) => { console.error("Firebase Memo Error:", err); });
+                        onSnapshot(qMemo, (snapshot) => { memoItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); }, (err) => { });
 
                     } catch (e) { connectionStatus.value = 'error'; }
                 });
 
-                const saveTripData = async () => {
-                    try {
-                        await setDoc(doc(db, "trips", "japan_2026"), { days: tripData.value });
-                    } catch (e) {
-                        console.error("行程儲存失敗:", e);
-                        alert("行程儲存失敗，請檢查網路！");
-                    }
+                const saveTripData = async () => { try { await setDoc(doc(db, "trips", "japan_2026"), { days: tripData.value }); } catch (e) { alert("行程儲存失敗"); } };
+                const resetData = () => { if(confirm('【警告】重置？')) { tripData.value = JSON.parse(JSON.stringify(defaultTripData)); saveTripData(); } };
+
+                // ★★★ 編輯功能群 ★★★
+                const openEditSpot = (d, i) => { 
+                    editType.value = 'spot'; isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=i; 
+                    editForm.value={...tripData.value[d].spots[i], tags:[]}; showModal.value=true; 
                 };
-                
-                const resetData = () => { 
-                    if(confirm('【警告】這將重置所有人的行程資料！確定嗎？')) { 
-                        tripData.value = JSON.parse(JSON.stringify(defaultTripData)); 
-                        saveTripData(); 
-                    } 
+                const addNewSpot = (d) => { 
+                    editType.value = 'spot'; isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=null; 
+                    editForm.value={time:'12:00', name:'', type:'spot', desc:'', transport:'', cost:'', url:''}; showModal.value=true; 
+                };
+                const openEditTheme = (d) => { 
+                    editType.value = 'spot'; isEditingTheme.value=true; editDayIndex.value=d; editForm.value.name=tripData.value[d].theme; showModal.value=true; 
                 };
 
-                // ★★★ 更新 openEditSpot 和 addNewSpot 以包含 url 欄位 ★★★
-                const openEditSpot = (d, i) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=i; editForm.value={...tripData.value[d].spots[i], tags:[]}; showModal.value=true; };
-                const addNewSpot = (d) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=null; editForm.value={time:'12:00', name:'', type:'spot', desc:'', transport:'', cost:'', url:''}; showModal.value=true; };
-                
-                const openEditTheme = (d) => { isEditingTheme.value=true; editDayIndex.value=d; editForm.value.name=tripData.value[d].theme; showModal.value=true; };
-                
-                const saveEdit = () => {
-                    if(isEditingTheme.value) tripData.value[editDayIndex.value].theme=editForm.value.name;
-                    else {
-                        const spot = {...editForm.value, tags:[]};
-                        if(editIndex.value!==null) tripData.value[editDayIndex.value].spots[editIndex.value]=spot;
-                        else tripData.value[editDayIndex.value].spots.push(spot);
-                        tripData.value[editDayIndex.value].spots.sort((a,b)=>a.time.localeCompare(b.time));
-                    }
-                    saveTripData(); showModal.value=false;
+                // ★★★ 新增：打開記帳編輯 ★★★
+                const openEditBudget = (item) => {
+                    editType.value = 'budget'; editId.value = item.id;
+                    editForm.value = { name: item.item, amount: item.amount, category: item.category, payer: item.payer };
+                    showModal.value = true;
                 };
+
+                // ★★★ 新增：打開購物編輯 ★★★
+                const openEditShopping = (item) => {
+                    editType.value = 'shopping'; editId.value = item.id;
+                    editForm.value = { name: item.item, qty: item.qty, price: item.price, payer: item.payer, url: item.url };
+                    showModal.value = true;
+                };
+
+                // ★★★ 核心儲存邏輯 (區分三種類型) ★★★
+                const saveEdit = async () => {
+                    try {
+                        if (editType.value === 'budget') {
+                            // 更新記帳
+                            await updateDoc(doc(db, "expenses", editId.value), {
+                                item: editForm.value.name,
+                                amount: editForm.value.amount,
+                                category: editForm.value.category,
+                                payer: editForm.value.payer
+                            });
+                        } else if (editType.value === 'shopping') {
+                            // 更新購物
+                            await updateDoc(doc(db, "shopping", editId.value), {
+                                item: editForm.value.name,
+                                qty: editForm.value.qty,
+                                price: editForm.value.price,
+                                payer: editForm.value.payer,
+                                url: editForm.value.url || ''
+                            });
+                        } else {
+                            // 更新行程 (Local)
+                            if(isEditingTheme.value) tripData.value[editDayIndex.value].theme=editForm.value.name;
+                            else {
+                                const spot = {...editForm.value, tags:[]};
+                                if(editIndex.value!==null) tripData.value[editDayIndex.value].spots[editIndex.value]=spot;
+                                else tripData.value[editDayIndex.value].spots.push(spot);
+                                tripData.value[editDayIndex.value].spots.sort((a,b)=>a.time.localeCompare(b.time));
+                            }
+                            await saveTripData();
+                        }
+                        showModal.value = false;
+                    } catch (e) {
+                        console.error("更新失敗", e);
+                        alert("更新失敗，請檢查網路");
+                    }
+                };
+
                 const deleteSpot = () => { if(confirm('刪除？')) { tripData.value[editDayIndex.value].spots.splice(editIndex.value, 1); saveTripData(); showModal.value=false; } };
                 const closeModal = () => showModal.value=false;
 
                 const addExpense = async () => {
                     if(!budgetForm.value.item || !budgetForm.value.amount || !budgetForm.value.payer) return;
                     try { 
-                        await addDoc(collection(db, "expenses"), { 
-                            item: budgetForm.value.item, 
-                            amount: budgetForm.value.amount, 
-                            category: budgetForm.value.category, 
-                            payer: budgetForm.value.payer, 
-                            createdAt: serverTimestamp() 
-                        }); 
+                        await addDoc(collection(db, "expenses"), { item: budgetForm.value.item, amount: budgetForm.value.amount, category: budgetForm.value.category, payer: budgetForm.value.payer, createdAt: serverTimestamp() }); 
                         budgetForm.value.item=''; budgetForm.value.amount=null; 
                     } catch (e) { alert("記帳失敗"); }
                 };
-                const deleteExpense = async (id) => { if(confirm('刪除此筆記帳？')) { try { await deleteDoc(doc(db, "expenses", id)); } catch (e) { alert("刪除失敗"); } } };
+                const deleteExpense = async (id) => { if(confirm('刪除此筆記帳？')) { await deleteDoc(doc(db, "expenses", id)); } };
 
-
-                // ★★★ 更新 addShoppingItem 以儲存 url ★★★
                 const addShoppingItem = async () => {
                     if(!shoppingForm.value.item || !shoppingForm.value.payer) return;
                     try {
-                        await addDoc(collection(db, "shopping"), {
-                            item: shoppingForm.value.item,
-                            qty: shoppingForm.value.qty > 0 ? shoppingForm.value.qty : 1,
-                            price: shoppingForm.value.price > 0 ? shoppingForm.value.price : null,
-                            payer: shoppingForm.value.payer,
-                            url: shoppingForm.value.url || '', // 儲存網址
-                            isBought: false,
-                            createdAt: serverTimestamp()
-                        });
+                        await addDoc(collection(db, "shopping"), { item: shoppingForm.value.item, qty: shoppingForm.value.qty || 1, price: shoppingForm.value.price || null, payer: shoppingForm.value.payer, url: shoppingForm.value.url || '', isBought: false, createdAt: serverTimestamp() });
                         shoppingForm.value = { item: '', qty: 1, price: null, payer: '共同', url: '' };
-                    } catch (e) {
-                        alert("加入清單失敗");
-                        console.error("Error adding shopping item: ", e);
-                    }
+                    } catch (e) { alert("加入失敗"); }
                 };
 
-                const deleteShoppingItem = async (id) => {
-                    if(confirm('確定刪除此購物項目？')) {
-                        try {
-                            await deleteDoc(doc(db, "shopping", id));
-                        } catch (e) {
-                            alert("刪除失敗");
-                            console.error("Error deleting shopping item: ", e);
-                        }
-                    }
-                };
-
-                const toggleBought = async (id) => {
-                    const itemRef = doc(db, "shopping", id);
-                    const currentItem = shoppingItems.value.find(i => i.id === id);
-                    if (currentItem) {
-                        try {
-                            await updateDoc(itemRef, {
-                                isBought: !currentItem.isBought
-                            });
-                        } catch (e) {
-                            alert("更新狀態失敗");
-                            console.error("Error updating shopping item status: ", e);
-                        }
-                    }
-                };
+                const deleteShoppingItem = async (id) => { if(confirm('刪除購物項目？')) { await deleteDoc(doc(db, "shopping", id)); } };
+                const toggleBought = async (id) => { const item = shoppingItems.value.find(i => i.id === id); if (item) await updateDoc(doc(db, "shopping", id), { isBought: !item.isBought }); };
                 
-                const addMemoItem = async () => {
-                    if (!memoForm.value.content) return;
-                    try {
-                        await addDoc(collection(db, "memo"), {
-                            content: memoForm.value.content,
-                            createdAt: serverTimestamp()
-                        });
-                        memoForm.value.content = ''; 
-                    } catch (e) {
-                        alert("新增備忘錄失敗");
-                        console.error("Error adding memo item: ", e);
-                    }
-                };
+                const addMemoItem = async () => { if (!memoForm.value.content) return; await addDoc(collection(db, "memo"), { content: memoForm.value.content, createdAt: serverTimestamp() }); memoForm.value.content = ''; };
+                const deleteMemoItem = async (id) => { if(confirm('刪除備忘錄？')) await deleteDoc(doc(db, "memo", id)); };
 
-                const deleteMemoItem = async (id) => {
-                    if(confirm('確定刪除此備忘錄項目？')) {
-                        try {
-                            await deleteDoc(doc(db, "memo", id));
-                        } catch (e) {
-                            alert("刪除失敗");
-                            console.error("Error deleting memo item: ", e);
-                        }
-                    }
-                };
-
-
-                const openMap = (location, type) => {
-                    let query = location; 
-                    if (type === '便利商店') {
-                         query = `Convenience stores near ${location}`;
-                    }
-                    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-                    window.open(mapUrl, '_blank');
-                };
+                const openMap = (location, type) => { window.open(`https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(type==='便利商店'?`Convenience stores near ${location}`:location)}`, '_blank'); };
 
                 const formatNumber = (n) => n ? n.toLocaleString() : '0';
                 const formatDate = (t) => { if(!t) return ''; const d = t.toDate ? t.toDate() : new Date(t); return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`; };
                 const getDotColor = (t) => ({'transport':'bg-gray-400','food':'bg-[#8f5a5a]','shopping':'bg-orange-400','hotel':'bg-indigo-400'}[t] || 'bg-[#788a6d]');
                 const getCategoryColor = (c) => ({'food':'bg-orange-500','transport':'bg-blue-500','shopping':'bg-pink-500','stay':'bg-indigo-500'}[c] || 'bg-gray-500');
                 const getCategoryIcon = (c) => `fa-solid ` + ({'food':'fa-utensils','transport':'fa-train','shopping':'fa-bag-shopping','stay':'fa-bed'}[c] || 'fa-tag');
-                
-                const getPayerStyle = (p) => {
-                    if (p === '陳小鯊') return 'bg-purple-100 text-purple-600';
-                    if (p === '黄臭豬') return 'bg-teal-100 text-teal-600';
-                    if (p === '共同') return 'bg-gray-100 text-gray-500';
-                    return 'bg-gray-100 text-gray-500'; 
-                };
+                const getPayerStyle = (p) => p === '陳小鯊' ? 'bg-purple-100 text-purple-600' : (p === '黄臭豬' ? 'bg-teal-100 text-teal-600' : 'bg-gray-100 text-gray-500');
                 
                 const getPageTitle = computed(() => ({'itinerary':'行程一覽','info':'資訊','budget':'記帳','shopping':'購物清單'}[currentTab.value]));
                 const currentDayDate = computed(() => tripData.value[currentDayIndex.value]?.date || '');
                 const totalSpent = computed(() => budgetItems.value.reduce((s,i)=>s+(i.amount||0),0));
                 const sortedBudgetItems = computed(() => budgetItems.value);
-                
-                const sortedShoppingItems = computed(() => {
-                    return [...shoppingItems.value].sort((a, b) => {
-                        if (a.isBought && !b.isBought) return 1;
-                        if (!a.isBought && b.isBought) return -1;
-                        return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
-                    });
-                });
-                
+                const sortedShoppingItems = computed(() => [...shoppingItems.value].sort((a, b) => (a.isBought===b.isBought) ? (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0) : (a.isBought?1:-1)));
                 const connectionText = computed(() => ({'connecting':'連線中','connected':'已連線','error':'離線'}[connectionStatus.value]));
                 const connectionColor = computed(() => ({'connecting':'bg-yellow-500','connected':'bg-green-500','error':'bg-red-500'}[connectionStatus.value]));
 
                 return { currentTab, currentDayIndex, tripData, flightInfo, trainInfo, hotels, budgetItems, budgetForm, shoppingItems: sortedShoppingItems, shoppingForm, memoItems, memoForm, 
-                    showModal, editForm, isEditingTheme, editIndex,
+                    showModal, editForm, isEditingTheme, editIndex, editType,
                     getPageTitle, currentDayDate, totalSpent, sortedBudgetItems, formatNumber, formatDate, 
-                    addExpense, deleteExpense, addShoppingItem, deleteShoppingItem, toggleBought,
-                    addMemoItem, deleteMemoItem, 
+                    addExpense, deleteExpense, addShoppingItem, deleteShoppingItem, toggleBought, addMemoItem, deleteMemoItem, 
                     getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData,
-                    connectionText, connectionColor, openMap, getPayerStyle, 
-                    isTripLoading 
+                    connectionText, connectionColor, openMap, getPayerStyle, isTripLoading,
+                    openEditBudget, openEditShopping // 新增匯出
                 };
             }
         }).mount('#app');
     </script>
 </body>
 </html>
-
-```

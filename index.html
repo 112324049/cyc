@@ -1,3 +1,25 @@
+沒問題！這能讓行程規劃和購物更方便，直接點擊就能查看網頁。
+
+我已為 **「行程 (Itinerary)」** 和 **「購物 (Shopping)」** 雙方都加入了 **「連結 (URL)」** 的功能：
+
+1. **行程編輯**：在編輯行程的視窗中，新增了「相關連結」欄位。輸入後，行程卡片標題旁會出現一個 🔗 連結圖示。
+2. **購物清單**：在新增商品時，多了一個「商品連結」欄位。清單中會出現連結按鈕，點擊直接開啟網頁。
+
+請使用以下最新的完整程式碼替換您的 `index.html` 內容：
+
+---
+
+## 💻 最終完整程式碼 (加入網址功能版)
+
+### 🌟 關鍵變動
+
+* **行程卡片**：標題旁新增 `<a>` 連結按鈕 (如果有網址)。
+* **行程編輯視窗**：新增 `input type="url"` 用於輸入連結。
+* **購物表單**：新增 `input type="url"`。
+* **購物清單**：新增連結按鈕。
+* **資料邏輯**：更新 `addShoppingItem` 和行程的 `saveEdit` 邏輯以儲存 `url` 欄位。
+
+```html
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -19,6 +41,10 @@
         #crash-screen { display: none; padding: 20px; color: red; font-family: monospace; background: #fff0f0; height: 100vh; z-index: 99999; position: fixed; inset: 0; }
         .guide-btn { transition: all 0.2s; }
         .guide-btn:active { transform: scale(0.95); opacity: 0.8; }
+        /* 交通卡片樣式優化 */
+        .transport-card-content { display: flex; justify-content: space-between; align-items: center; }
+        .transport-card-middle { flex: 1; padding: 0 1rem; display: flex; flex-direction: column; align-items: center; }
+        .transport-card-endpoint { text-align: center; }
     </style>
 </head>
 <body class="text-gray-800 font-sans h-screen overflow-hidden flex flex-col">
@@ -47,7 +73,7 @@
                 <span class="block text-2xl font-bold">{{ currentDayDate }}</span>
                 <span class="text-xs text-gray-400">Day {{ currentDayIndex + 1 }}</span>
             </div>
-            <div v-if="currentTab !== 'itinerary'" class="text-right">
+            <div v-if="currentTab === 'budget' || currentTab === 'shopping'" class="text-right">
                 <div class="flex items-center justify-end text-xs text-gray-400">
                     <span class="w-2 h-2 rounded-full mr-1" :class="connectionColor"></span>
                     {{ connectionText }}
@@ -93,8 +119,10 @@
                             <button @click="openEditSpot(currentDayIndex, sIndex)" class="absolute top-2 right-2 text-gray-300 hover:text-[#788a6d] p-2"><i class="fa-solid fa-pen-to-square"></i></button>
                             
                             <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ spot.time }}</span>
-                            <h4 class="text-lg font-bold mt-1 flex items-center">{{ spot.name }} 
-                                <button @click.stop="openMap(spot.name, 'location')" class="ml-2 text-gray-300 text-sm"><i class="fa-solid fa-location-arrow"></i></button>
+                            <h4 class="text-lg font-bold mt-1 flex items-center">
+                                {{ spot.name }} 
+                                <a v-if="spot.url" :href="spot.url" target="_blank" class="ml-2 text-blue-400 text-sm hover:text-blue-600" @click.stop><i class="fa-solid fa-link"></i></a>
+                                <button @click.stop="openMap(spot.name, 'location')" class="ml-2 text-gray-300 text-sm hover:text-[#788a6d]"><i class="fa-solid fa-location-arrow"></i></button>
                             </h4>
                             
                             <p v-if="spot.desc" class="text-sm text-gray-600 mt-1 whitespace-pre-line">{{ spot.desc }}</p>
@@ -134,7 +162,6 @@
 
                     <div class="space-y-3">
                          <div v-if="memoItems.length === 0" class="text-center py-4 text-gray-400 text-sm">沒有任何備忘錄</div>
-                         
                          <div v-for="item in memoItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-start shadow-sm">
                             <p class="text-sm flex-1 mr-4 whitespace-pre-line">{{ item.content }}</p>
                             <button @click="deleteMemoItem(item.id)" class="text-gray-300 hover:text-red-500 flex-shrink-0"><i class="fa-solid fa-trash text-xs"></i></button>
@@ -214,6 +241,7 @@
                         </a>
                     </div>
                 </section>
+
                 <section class="mt-8 border-t border-gray-200 pt-4">
                     <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Hotels</h3>
                     <div class="space-y-3">
@@ -251,16 +279,13 @@
                     <form @submit.prevent="addExpense" class="space-y-3">
                         <div class="grid grid-cols-2 gap-3">
                             <input v-model="budgetForm.item" type="text" placeholder="品項" required class="col-span-2 w-full p-2 bg-gray-50 border rounded text-sm">
-                            
                             <select v-model="budgetForm.payer" required class="w-full p-2 bg-gray-50 border rounded text-sm">
                                 <option value="" disabled>-- 誰付的? --</option>
                                 <option value="陳小鯊">陳小鯊</option>
                                 <option value="黄臭豬">黄臭豬</option>
                                 <option value="共同">共同</option>
                             </select>
-
                             <input v-model.number="budgetForm.amount" type="number" placeholder="金額 (日幣)" required class="w-full p-2 bg-gray-50 border rounded text-sm">
-                            
                             <select v-model="budgetForm.category" class="col-span-2 w-full p-2 bg-gray-50 border rounded text-sm">
                                 <option value="food">飲食</option><option value="transport">交通</option><option value="shopping">購物</option><option value="stay">住宿</option><option value="other">其他</option>
                             </select>
@@ -271,8 +296,8 @@
                     </form>
                 </div>
                 <div class="space-y-3">
+                    <div v-if="connectionStatus === 'connecting'" class="text-center py-4 text-gray-400 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-1"></i> 載入中...</div>
                     <div v-else-if="sortedBudgetItems.length === 0" class="text-center py-8 text-gray-400 text-sm">尚未有紀錄</div>
-                    
                     <div v-for="item in sortedBudgetItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center shadow-sm">
                         <div class="flex items-center">
                             <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs mr-3 text-white" :class="getCategoryColor(item.category)">
@@ -284,9 +309,7 @@
                             </div>
                         </div>
                         <div class="flex flex-col items-end">
-                             <span class="text-xs font-bold px-2 py-0.5 rounded" :class="getPayerStyle(item.payer)">
-                                {{ item.payer }}
-                            </span>
+                            <span class="text-xs font-bold px-2 py-0.5 rounded" :class="getPayerStyle(item.payer)">{{ item.payer }}</span>
                             <span class="font-mono font-bold mt-1">¥{{ formatNumber(item.amount) }}</span>
                             <button @click="deleteExpense(item.id)" class="text-gray-300 hover:text-red-500 mt-1"><i class="fa-solid fa-trash text-xs"></i></button>
                         </div>
@@ -306,10 +329,9 @@
                                 <option value="黄臭豬">黄臭豬</option>
                                 <option value="共同">共同</option>
                             </select>
-
                              <input v-model="shoppingForm.qty" type="number" placeholder="數量" min="1" class="w-full p-2 bg-gray-50 border rounded text-sm">
-                             
                              <input v-model="shoppingForm.price" type="number" placeholder="預估單價 (日圓, 可選)" class="col-span-2 w-full p-2 bg-gray-50 border rounded text-sm">
+                             <input v-model="shoppingForm.url" type="url" placeholder="商品連結 (網址)..." class="col-span-2 w-full p-2 bg-gray-50 border rounded text-sm">
                         </div>
                         
                         <button type="submit" class="w-full bg-[#8f5a5a] text-white py-2 rounded font-bold text-sm shadow active:bg-[#7a4848]">
@@ -319,6 +341,7 @@
                 </div>
 
                 <div class="space-y-3">
+                    <div v-if="connectionStatus === 'connecting'" class="text-center py-4 text-gray-400 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-1"></i> 載入中...</div>
                     <div v-else-if="shoppingItems.length === 0" class="text-center py-8 text-gray-400 text-sm">清單目前是空的喔！</div>
 
                     <div v-for="item in shoppingItems" :key="item.id" class="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center shadow-sm transition-all" :class="{'opacity-50': item.isBought}">
@@ -327,7 +350,10 @@
                                 <i class="fa-solid" :class="item.isBought ? 'fa-check' : 'fa-list'"></i>
                             </button>
                             <div :class="{'line-through text-gray-400': item.isBought}">
-                                <p class="font-bold text-sm">{{ item.item }}</p>
+                                <p class="font-bold text-sm flex items-center">
+                                    {{ item.item }}
+                                    <a v-if="item.url" :href="item.url" target="_blank" class="ml-2 text-blue-400 text-xs hover:text-blue-600"><i class="fa-solid fa-link"></i></a>
+                                </p>
                                 <p class="text-[10px] text-gray-500 mt-0.5">
                                     數量: <span class="font-bold">{{ item.qty }}</span> 
                                     <span v-if="item.price"> | 預估單價: ¥{{ formatNumber(item.price) }}</span>
@@ -375,6 +401,11 @@
                         <label class="text-xs font-bold text-gray-500">費用</label>
                         <input v-model="editForm.cost" type="text" class="w-full border rounded p-2 text-sm">
                     </div>
+                    <div v-if="!isEditingTheme">
+                        <label class="text-xs font-bold text-gray-500">相關連結 (網址)</label>
+                        <input v-model="editForm.url" type="url" placeholder="https://..." class="w-full border rounded p-2 text-sm">
+                    </div>
+
                     <div v-if="!isEditingTheme && editIndex !== null" class="pt-2">
                         <button @click="deleteSpot" class="text-red-500 text-xs w-full py-2">刪除此行程</button>
                     </div>
@@ -430,27 +461,25 @@
                     { day: 6, date: "3/5", theme: "返程", spots: [{ time: "09:00", name: "難波八阪神社", type: "spot", desc: "獅子頭", tags: ["拍照"] }, { time: "20:00", name: "機場", type: "transport", desc: "登機", tags: ["離境"], cost: "¥970" }] }
                 ];
                 
-                // 使用 JSON 複製一份，確保不連動
                 const tripData = ref(JSON.parse(JSON.stringify(defaultTripData)));
                 const isTripLoading = ref(true);
 
                 const budgetItems = ref([]);
                 const budgetForm = ref({ item: '', amount: null, category: 'food', payer: '陳小鯊' });
                 
-                // 購物清單狀態
                 const shoppingItems = ref([]);
-                const shoppingForm = ref({ item: '', qty: 1, price: null, payer: '共同' });
+                // 購物表單新增 url
+                const shoppingForm = ref({ item: '', qty: 1, price: null, payer: '共同', url: '' });
 
-                // 備忘錄狀態
                 const memoItems = ref([]);
                 const memoForm = ref({ content: '' });
-
 
                 const showModal = ref(false);
                 const isEditingTheme = ref(false);
                 const editDayIndex = ref(null);
                 const editIndex = ref(null);
-                const editForm = ref({ time: '', name: '', type: 'spot', desc: '', transport: '', cost: '' });
+                // 行程編輯表單新增 url
+                const editForm = ref({ time: '', name: '', type: 'spot', desc: '', transport: '', cost: '', url: '' });
                 const connectionStatus = ref('connecting');
 
                 const flightInfo = ref([
@@ -467,33 +496,28 @@
 
                 onMounted(() => {
                     try {
-                        // 1. 雲端行程同步 (Trips)
                         const tripRef = doc(db, "trips", "japan_2026");
                         onSnapshot(tripRef, (docSnap) => {
                             if (docSnap.exists()) {
                                 tripData.value = docSnap.data().days;
                             } else {
-                                // 如果雲端沒資料，就初始化一份
                                 setDoc(tripRef, { days: defaultTripData });
                                 tripData.value = defaultTripData;
                             }
                             isTripLoading.value = false;
                         });
 
-                        // 2. 記帳同步
                         const qBudget = query(collection(db, "expenses"), orderBy("createdAt", "desc"));
                         onSnapshot(qBudget, (snapshot) => {
                             budgetItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                             connectionStatus.value = 'connected';
                         }, (err) => { connectionStatus.value = 'error'; console.error("Firebase Budget Error:", err); });
 
-                        // 3. 購物同步
                         const qShopping = query(collection(db, "shopping"), orderBy("createdAt", "desc"));
                         onSnapshot(qShopping, (snapshot) => {
                             shoppingItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         }, (err) => { console.error("Firebase Shopping Error:", err); });
                         
-                        // 4. 備忘錄同步
                         const qMemo = query(collection(db, "memo"), orderBy("createdAt", "desc"));
                         onSnapshot(qMemo, (snapshot) => {
                             memoItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -502,7 +526,6 @@
                     } catch (e) { connectionStatus.value = 'error'; }
                 });
 
-                // ★★★ 雲端行程儲存函式 ★★★
                 const saveTripData = async () => {
                     try {
                         await setDoc(doc(db, "trips", "japan_2026"), { days: tripData.value });
@@ -519,9 +542,12 @@
                     } 
                 };
 
+                // ★★★ 更新 openEditSpot 和 addNewSpot 以包含 url 欄位 ★★★
                 const openEditSpot = (d, i) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=i; editForm.value={...tripData.value[d].spots[i], tags:[]}; showModal.value=true; };
-                const addNewSpot = (d) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=null; editForm.value={time:'12:00', name:'', type:'spot', desc:'', transport:'', cost:''}; showModal.value=true; };
+                const addNewSpot = (d) => { isEditingTheme.value=false; editDayIndex.value=d; editIndex.value=null; editForm.value={time:'12:00', name:'', type:'spot', desc:'', transport:'', cost:'', url:''}; showModal.value=true; };
+                
                 const openEditTheme = (d) => { isEditingTheme.value=true; editDayIndex.value=d; editForm.value.name=tripData.value[d].theme; showModal.value=true; };
+                
                 const saveEdit = () => {
                     if(isEditingTheme.value) tripData.value[editDayIndex.value].theme=editForm.value.name;
                     else {
@@ -551,7 +577,7 @@
                 const deleteExpense = async (id) => { if(confirm('刪除此筆記帳？')) { try { await deleteDoc(doc(db, "expenses", id)); } catch (e) { alert("刪除失敗"); } } };
 
 
-                // 購物清單相關功能
+                // ★★★ 更新 addShoppingItem 以儲存 url ★★★
                 const addShoppingItem = async () => {
                     if(!shoppingForm.value.item || !shoppingForm.value.payer) return;
                     try {
@@ -560,10 +586,11 @@
                             qty: shoppingForm.value.qty > 0 ? shoppingForm.value.qty : 1,
                             price: shoppingForm.value.price > 0 ? shoppingForm.value.price : null,
                             payer: shoppingForm.value.payer,
+                            url: shoppingForm.value.url || '', // 儲存網址
                             isBought: false,
                             createdAt: serverTimestamp()
                         });
-                        shoppingForm.value = { item: '', qty: 1, price: null, payer: '共同' };
+                        shoppingForm.value = { item: '', qty: 1, price: null, payer: '共同', url: '' };
                     } catch (e) {
                         alert("加入清單失敗");
                         console.error("Error adding shopping item: ", e);
@@ -596,7 +623,6 @@
                     }
                 };
                 
-                // 備忘錄相關功能
                 const addMemoItem = async () => {
                     if (!memoForm.value.content) return;
                     try {
@@ -604,7 +630,7 @@
                             content: memoForm.value.content,
                             createdAt: serverTimestamp()
                         });
-                        memoForm.value.content = ''; // 清空輸入框
+                        memoForm.value.content = ''; 
                     } catch (e) {
                         alert("新增備忘錄失敗");
                         console.error("Error adding memo item: ", e);
@@ -650,7 +676,6 @@
                 const totalSpent = computed(() => budgetItems.value.reduce((s,i)=>s+(i.amount||0),0));
                 const sortedBudgetItems = computed(() => budgetItems.value);
                 
-                // 排序購物清單：未買的在前，已買的在後
                 const sortedShoppingItems = computed(() => {
                     return [...shoppingItems.value].sort((a, b) => {
                         if (a.isBought && !b.isBought) return 1;
@@ -669,10 +694,12 @@
                     addMemoItem, deleteMemoItem, 
                     getDotColor, getCategoryColor, getCategoryIcon, openEditSpot, addNewSpot, openEditTheme, saveEdit, closeModal, deleteSpot, resetData,
                     connectionText, connectionColor, openMap, getPayerStyle, 
-                    isTripLoading // 新增回傳
+                    isTripLoading 
                 };
             }
         }).mount('#app');
     </script>
 </body>
 </html>
+
+```
